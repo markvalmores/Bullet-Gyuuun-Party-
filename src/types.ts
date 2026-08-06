@@ -23,6 +23,7 @@ export interface UserProfile {
   photoURL: string;
   email: string | null;
   isAdmin?: boolean;
+  level?: number;
   goldenCarrots: number;
   inventory: UserInventory;
   achievements?: string[];

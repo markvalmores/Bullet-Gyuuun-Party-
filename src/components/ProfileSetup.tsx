@@ -24,17 +24,23 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ onComplete }) => {
 
     setLoading(true);
     try {
+      const isAdmin = ['mdv4244@gmail.com', 'zerozone757@gmail.com', 'usagyuuunquan@gmail.com'].includes(auth.currentUser.email?.toLowerCase() || '');
+      
       // 1. Initialize user doc
       await setDoc(doc(db, 'users', auth.currentUser.uid), {
         uid: auth.currentUser.uid,
-        username,
+        username: isAdmin ? `${username} (Admin)` : username,
         photoURL: photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${username}`,
         email: auth.currentUser.email,
-        goldenCarrots: 500, // Starting bonus
+        isAdmin: isAdmin,
+        level: isAdmin ? 99 : 1,
+        goldenCarrots: isAdmin ? 999999999 : 500, // Unlimited for admin
         inventory: {
-          items: [],
+          items: isAdmin ? ['gun_laser_1', 'target_pizza_pro', 'skill_fever_boost', 'char_vampire', 'acc_top_hat', 'grand_violet_overlord'] : [],
           equipped: {
-            skills: []
+            skills: isAdmin ? ['skill_fever_boost', 'grand_violet_overlord'] : [],
+            character: isAdmin ? 'char_vampire' : undefined,
+            gun: isAdmin ? 'gun_laser_1' : undefined
           }
         },
         achievements: [],

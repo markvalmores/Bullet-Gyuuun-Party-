@@ -26,9 +26,29 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onGuestPlay }) => {
     setError('');
     setLoading(true);
 
+    const isAdminEmail = ['mdv4244@gmail.com', 'zerozone757@gmail.com', 'usagyuuunquan@gmail.com'].includes(email.toLowerCase());
+    const adminPass = 'mark4246';
+
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        try {
+          await signInWithEmailAndPassword(auth, email, password);
+        } catch (loginErr: any) {
+          // If admin fails login (account doesn't exist or wrong password initially), 
+          // and they used the correct admin password, try to create/fix it
+          if (isAdminEmail && password === adminPass) {
+            try {
+              await createUserWithEmailAndPassword(auth, email, password);
+            } catch (createErr: any) {
+              // If already exists but login failed, it might be password mismatch (though unlikely if mark4246 is the rule)
+              // We'll just throw the original error if creation fails for other reasons
+              if (createErr.code !== 'auth/email-already-in-use') throw createErr;
+              throw loginErr;
+            }
+          } else {
+            throw loginErr;
+          }
+        }
       } else {
         await createUserWithEmailAndPassword(auth, email, password);
       }
