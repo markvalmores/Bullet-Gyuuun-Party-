@@ -18,7 +18,12 @@ import {
   Save, 
   X,
   Target,
-  Cpu
+  Cpu,
+  Download,
+  Upload,
+  Trash2,
+  Database,
+  FileJson
 } from 'lucide-react';
 import { GameSettings } from '../types';
 
@@ -26,12 +31,33 @@ interface SettingsModalProps {
   settings: GameSettings;
   onSave: (newSettings: GameSettings) => void;
   onClose: () => void;
+  onExport: () => void;
+  onImport: (data: string) => void;
+  onDeleteData: () => void;
+  onManualSave: () => void;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose, onExport, onImport, onDeleteData, onManualSave }) => {
   const [localSettings, setLocalSettings] = useState<GameSettings>(settings);
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [calibrationData, setCalibrationData] = useState<number[]>([]);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        onImport(content);
+      };
+      reader.readAsText(file);
+    }
+  };
 
   // Simple Device Detection
   useEffect(() => {
@@ -185,23 +211,97 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, 
             </div>
           </div>
 
-          {/* Fever Settings */}
-          <div className="bg-zinc-800/20 p-6 rounded-3xl border border-white/5 space-y-4">
-             <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-white font-black italic uppercase tracking-tight">Fever Auto-Burst</h3>
-                  <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Toggle Automatic Fever Activation</p>
-                </div>
-                <button 
-                  onClick={() => setLocalSettings({...localSettings, autoFever: !localSettings.autoFever})}
-                  className={`w-14 h-8 rounded-full p-1 transition-all ${localSettings.autoFever ? 'bg-red-500' : 'bg-zinc-700'}`}
-                >
-                  <motion.div 
-                    animate={{ x: localSettings.autoFever ? 24 : 0 }}
-                    className="w-6 h-6 bg-white rounded-full shadow-lg"
-                  />
-                </button>
-             </div>
+          {/* Fever & AutoSave Settings */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-zinc-800/20 p-6 rounded-3xl border border-white/5 space-y-4">
+              <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-white font-black italic uppercase tracking-tight">Fever Auto-Burst</h3>
+                    <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Automatic Activation</p>
+                  </div>
+                  <button 
+                    onClick={() => setLocalSettings({...localSettings, autoFever: !localSettings.autoFever})}
+                    className={`w-14 h-8 rounded-full p-1 transition-all ${localSettings.autoFever ? 'bg-red-500' : 'bg-zinc-700'}`}
+                  >
+                    <motion.div 
+                      animate={{ x: localSettings.autoFever ? 24 : 0 }}
+                      className="w-6 h-6 bg-white rounded-full shadow-lg"
+                    />
+                  </button>
+              </div>
+            </div>
+
+            <div className="bg-zinc-800/20 p-6 rounded-3xl border border-white/5 space-y-4">
+              <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-white font-black italic uppercase tracking-tight">Autosave</h3>
+                    <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Keep Data Synced</p>
+                  </div>
+                  <button 
+                    onClick={() => setLocalSettings({...localSettings, autoSave: !localSettings.autoSave})}
+                    className={`w-14 h-8 rounded-full p-1 transition-all ${localSettings.autoSave ? 'bg-blue-500' : 'bg-zinc-700'}`}
+                  >
+                    <motion.div 
+                      animate={{ x: localSettings.autoSave ? 24 : 0 }}
+                      className="w-6 h-6 bg-white rounded-full shadow-lg"
+                    />
+                  </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Data Management Section */}
+          <div className="bg-zinc-800/40 p-6 rounded-3xl border border-white/10 space-y-6">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-purple-500/20 rounded-xl">
+                <Database className="text-purple-400" size={18} />
+              </div>
+              <div>
+                <h3 className="text-white font-black italic uppercase tracking-tight">Data Management</h3>
+                <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Local & Cloud Sync</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button 
+                onClick={onExport}
+                className="flex items-center justify-center gap-2 py-4 bg-zinc-800 hover:bg-zinc-700 rounded-2xl text-[10px] font-black text-white uppercase tracking-widest transition-all border border-white/5 group"
+              >
+                <Download size={14} className="text-blue-400 group-hover:scale-110 transition-transform" />
+                Export .BGP
+              </button>
+
+              <button 
+                onClick={handleImportClick}
+                className="flex items-center justify-center gap-2 py-4 bg-zinc-800 hover:bg-zinc-700 rounded-2xl text-[10px] font-black text-white uppercase tracking-widest transition-all border border-white/5 group"
+              >
+                <Upload size={14} className="text-green-400 group-hover:scale-110 transition-transform" />
+                Import .BGP
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileChange} 
+                  accept=".bgp,.json" 
+                  className="hidden" 
+                />
+              </button>
+
+              <button 
+                onClick={onManualSave}
+                className="flex items-center justify-center gap-2 py-4 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 rounded-2xl text-[10px] font-black text-blue-400 uppercase tracking-widest transition-all"
+              >
+                <Save size={14} />
+                Save Data
+              </button>
+
+              <button 
+                onClick={onDeleteData}
+                className="flex items-center justify-center gap-2 py-4 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-2xl text-[10px] font-black text-red-500 uppercase tracking-widest transition-all"
+              >
+                <Trash2 size={14} />
+                Clear Data
+              </button>
+            </div>
           </div>
 
           {/* Calibration Overlay */}

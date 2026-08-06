@@ -12,9 +12,10 @@ interface ResultsScreenProps {
   score: ScoreBreakdown;
   character: Character;
   onRetry: () => void;
+  isGuest?: boolean;
 }
 
-export const ResultsScreen: React.FC<ResultsScreenProps> = ({ score, character, onRetry }) => {
+export const ResultsScreen: React.FC<ResultsScreenProps> = ({ score, character, onRetry, isGuest }) => {
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-center bg-black/60 text-white p-6">
       <motion.div
@@ -42,7 +43,12 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({ score, character, 
             <div className="text-6xl font-black text-white tracking-tighter">
               {score.totalScore.toLocaleString()}
             </div>
-            {score.totalScore > character.bestScore && (
+            {isGuest && (
+              <div className="mt-2 text-[10px] text-yellow-500 font-black uppercase tracking-widest text-center">
+                Guest Score (Not Submitted)
+              </div>
+            )}
+            {score.totalScore > character.bestScore && !isGuest && (
               <motion.div 
                 animate={{ scale: [1, 1.1, 1] }}
                 transition={{ repeat: Infinity, duration: 1 }}

@@ -11,9 +11,10 @@ import { ShieldCheck, AlertCircle, LogIn, UserPlus } from 'lucide-react';
 
 interface AuthProps {
   onAuthSuccess: () => void;
+  onGuestPlay: () => void;
 }
 
-export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
+export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onGuestPlay }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -123,6 +124,14 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
               {isLogin ? 'Login To Play' : 'Initialize Account'}
             </>
           )}
+        </button>
+
+        <button
+          type="button"
+          onClick={onGuestPlay}
+          className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-zinc-400 font-bold uppercase text-xs tracking-[0.2em] transition-all"
+        >
+          Play As Guest
         </button>
       </form>
 

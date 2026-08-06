@@ -10,6 +10,7 @@ export interface GameSettings {
   offset: number; // ms
   speed: number;
   autoFever: boolean;
+  autoSave: boolean;
   deviceType: string;
   os: string;
 }
@@ -20,8 +21,15 @@ export interface UserProfile {
   uid: string;
   username: string;
   photoURL: string;
-  email: string;
+  email: string | null;
   isAdmin?: boolean;
+  goldenCarrots: number;
+  inventory: UserInventory;
+  achievements?: string[];
+  createdAt?: string;
+  lastLogin?: string;
+  dailyStreak?: number;
+  claimedToday?: boolean;
 }
 
 export interface Target {
@@ -34,6 +42,40 @@ export interface Target {
   status: 'ACTIVE' | 'HIT' | 'MISS';
   lane: number; // 0 (top), 1 (bottom)
   image: string;
+}
+
+export type ItemCategory = 'GUN' | 'TARGET' | 'SKILL' | 'CHARACTER' | 'ACCESSORY' | 'GRAND_SKILL';
+
+export interface GameItem {
+  id: string;
+  name: string;
+  description: string;
+  category: ItemCategory;
+  price: number;
+  image: string;
+  rarity: 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | 'GRAND';
+  power?: number; // For skills or guns
+  gachaOnly?: boolean;
+}
+
+export interface UserInventory {
+  items: string[]; // IDs of owned items
+  goldenCarrots: number;
+  equipped: {
+    gun?: string;
+    character?: string;
+    accessory?: string;
+    skills: string[];
+  };
+}
+
+export interface GachaBanner {
+  id: string;
+  name: string;
+  image: string;
+  limitedItem: GameItem;
+  rate: number; // 0-100
+  cost: number;
 }
 
 export interface ScoreBreakdown {

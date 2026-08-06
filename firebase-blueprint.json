@@ -1,30 +1,78 @@
 {
-  "collections": {
-    "users": {
-      "documents": {
-        "userId": {
-          "fields": {
-            "username": "string",
-            "photoURL": "string",
-            "email": "string",
-            "createdAt": "timestamp"
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile with inventory and currency",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "username": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "email": { "type": "string" },
+        "goldenCarrots": { "type": "number" },
+        "inventory": {
+          "type": "object",
+          "properties": {
+            "items": { "type": "array", "items": { "type": "string" } },
+            "equipped": {
+              "type": "object",
+              "properties": {
+                "gun": { "type": "string" },
+                "character": { "type": "string" },
+                "accessory": { "type": "string" },
+                "skills": { "type": "array", "items": { "type": "string" } }
+              }
+            }
           }
-        }
+        },
+        "achievements": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "username", "goldenCarrots", "inventory"]
+    },
+    "Score": {
+      "title": "Score Record",
+      "description": "A high score record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "score": { "type": "number" },
+        "combo": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" }
       }
     },
-    "scores": {
-      "documents": {
-        "scoreId": {
-          "fields": {
-            "userId": "string",
-            "username": "string",
-            "photoURL": "string",
-            "score": "number",
-            "combo": "number",
-            "timestamp": "timestamp"
-          }
-        }
+    "GlobalStats": {
+      "title": "Global Stats",
+      "description": "Global counters for the game",
+      "type": "object",
+      "properties": {
+        "totalPlayers": { "type": "number" }
       }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User data including inventory"
+    },
+    "/scores/{scoreId}": {
+      "schema": "Score",
+      "description": "Leaderboard scores"
+    },
+    "/stats/global": {
+      "schema": "GlobalStats",
+      "description": "Global statistics"
+    },
+    "/online_players/{userId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "lastSeen": { "type": "string", "format": "date-time" }
+        }
+      },
+      "description": "Real-time presence tracking"
     }
   }
 }

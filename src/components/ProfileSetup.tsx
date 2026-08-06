@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, increment, updateDoc } from 'firebase/firestore';
 import { Camera, CheckCircle2, User } from 'lucide-react';
 
 interface ProfileSetupProps {
@@ -24,13 +24,33 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ onComplete }) => {
 
     setLoading(true);
     try {
+      // 1. Initialize user doc
       await setDoc(doc(db, 'users', auth.currentUser.uid), {
         uid: auth.currentUser.uid,
         username,
         photoURL: photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${username}`,
         email: auth.currentUser.email,
-        createdAt: serverTimestamp()
+        goldenCarrots: 500, // Starting bonus
+        inventory: {
+          items: [],
+          equipped: {
+            skills: []
+          }
+        },
+        achievements: [],
+        createdAt: new Date().toISOString()
       });
+
+      // 2. Increment global total players
+      try {
+        await updateDoc(doc(db, 'stats', 'global'), {
+          totalPlayers: increment(1)
+        });
+      } catch (statsErr) {
+        // If stats doc doesn't exist, create it
+        await setDoc(doc(db, 'stats', 'global'), { totalPlayers: 1 }, { merge: true });
+      }
+
       onComplete();
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, `users/${auth.currentUser.uid}`);
