@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gyuuun-party-v1';
+const CACHE_NAME = 'gyuuun-party-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -17,12 +17,68 @@ self.addEventListener('install', (event) => {
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
+  // Only handle GET requests for caching
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
     caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
+      if (response) return response;
+      
+      return fetch(event.request).then((networkResponse) => {
+        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+          return networkResponse;
+        }
+
+        const responseToCache = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+
+        return networkResponse;
+      }).catch(() => {
+        // Fallback for offline images or routes
+        if (event.request.destination === 'image') {
+          return caches.match('/assets/input_file_0.png');
+        }
+      });
     })
   );
 });
+
+// Background Sync Logic
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-scores') {
+    event.waitUntil(syncScores());
+  }
+});
+
+async function syncScores() {
+  // This would interact with IndexedDB or a broadcast channel to the client
+  // Since we're using Firebase with enableIndexedDbPersistence, 
+  // Firebase already handles most background sync for Firestore.
+  // However, for custom logic, we can post a message back to clients.
+  const allClients = await self.clients.matchAll();
+  allClients.forEach(client => {
+    client.postMessage({ type: 'SYNC_RECONNECT' });
+  });
+}
+

@@ -18,13 +18,34 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow write: if isOwner(userId);
+      allow get: if isOwner(userId);
+      allow list: if false; 
+      
+      function isValidUser(data) {
+        return data.keys().hasAll(['uid', 'username', 'goldenCarrots', 'inventory', 'createdAt']) &&
+               data.uid == request.auth.uid &&
+               data.username is string && data.username.size() <= 50 &&
+               data.goldenCarrots is number &&
+               data.inventory is map;
+      }
+
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['goldenCarrots', 'inventory', 'achievements', 'dailyStreak', 'claimedToday', 'level', 'username', 'photoURL', 'isAdmin'])
+      );
     }
 
     match /scores/{scoreId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      
+      function isValidScore(data) {
+        return data.keys().hasAll(['userId', 'score', 'timestamp']) &&
+               data.userId == request.auth.uid &&
+               data.score is number;
+      }
+
+      allow create: if isSignedIn() && isValidId(scoreId) && isValidScore(request.resource.data);
+      allow update, delete: if false;
     }
 
     match /stats/global {

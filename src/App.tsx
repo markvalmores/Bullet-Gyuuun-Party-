@@ -339,12 +339,14 @@ export default function App() {
   }, [characters]);
 
   useEffect(() => {
-    if (state === 'TITLE') return;
+    if (state === 'TITLE' || state === 'PRELOADING') return;
     if (isGuest) return;
 
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      syncUserProfile(firebaseUser);
+      if (firebaseUser) {
+        setUser(firebaseUser);
+        syncUserProfile(firebaseUser);
+      }
     });
     return () => unsubscribe();
   }, [state, isGuest, syncUserProfile]);
@@ -371,6 +373,40 @@ export default function App() {
     setSelectedCharacter(char);
     setState('PLAYING');
   };
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setSystemMessage("Network Restored: Synchronizing Game Data...");
+      setTimeout(() => setSystemMessage(null), 3000);
+      
+      // Force a sync if we have a user
+      if (auth.currentUser) {
+        syncUserProfile(auth.currentUser);
+      }
+    };
+
+    const handleOffline = () => {
+      setSystemMessage("Network Lost: Entering Offline Safe Mode");
+      setTimeout(() => setSystemMessage(null), 3000);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Listen for Service Worker messages
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'SYNC_RECONNECT') {
+          handleOnline();
+        }
+      });
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [syncUserProfile]);
 
   const handleStartApp = () => {
     setState('PRELOADING');
@@ -794,7 +830,12 @@ export default function App() {
           {state === 'AUTH' && (
             <motion.div key="auth" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.1 }}>
               <Auth 
-                onAuthSuccess={() => syncUserProfile(auth.currentUser)} 
+                onAuthSuccess={() => {
+                  // Wait a bit for auth state to propagate if needed
+                  setTimeout(() => {
+                    if (auth.currentUser) syncUserProfile(auth.currentUser);
+                  }, 100);
+                }} 
                 onGuestPlay={handleGuestPlay} 
               />
             </motion.div>

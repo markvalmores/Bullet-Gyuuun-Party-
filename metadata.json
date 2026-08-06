@@ -1,6 +1,6 @@
 {
   "name": "Bullet Gyuuun Party!!!",
-  "description": "High-octane rhythm shooting madness featuring the legendary Usagyuuun! Multi-device support, global leaderboards, and pure Gyuuun energy.",
+  "description": "High-octane Usagyuuun rhythm game with AI Gacha, global leaderboards, and extreme offline support.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

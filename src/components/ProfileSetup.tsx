@@ -34,10 +34,10 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ onComplete }) => {
         email: auth.currentUser.email,
         isAdmin: isAdmin,
         level: isAdmin ? 99 : 1,
-        goldenCarrots: isAdmin ? 999999999 : 500, // Unlimited for admin
+        goldenCarrots: isAdmin ? 999999999 : 340, // 340 Golden Carrots Bonus
         inventory: {
           items: isAdmin ? ['gun_laser_1', 'target_pizza_pro', 'skill_fever_boost', 'char_vampire', 'acc_top_hat', 'grand_violet_overlord'] : [],
-          goldenCarrots: isAdmin ? 999999999 : 500,
+          goldenCarrots: isAdmin ? 999999999 : 340,
           equipped: {
             skills: isAdmin ? ['skill_fever_boost', 'grand_violet_overlord'] : [],
             character: isAdmin ? 'char_vampire' : undefined,
