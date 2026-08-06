@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, addDoc, collection, serverTimestamp, onSnapshot, setDoc, updateDoc, increment, query, where, getDocs } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from './lib/firebase';
@@ -18,6 +18,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { Shop } from './components/Shop';
 import { Gacha } from './components/Gacha';
 import { DailyCalendar } from './components/DailyCalendar';
+import { LoadingScreen } from './components/LoadingScreen';
 import { Music, Volume2, VolumeX, ShieldCheck, RefreshCw, Settings as SettingsIcon, ShoppingBag, Sparkles, Users, Radio, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SHOP_ITEMS } from './data/items';
@@ -47,12 +48,9 @@ const PLAYER_2_URL = '/assets/input_file_2.png'; // Blue BG Usagyuuun
 const TARGET_URL = '/assets/input_file_0.png';   // Balloons Usagyuuun
 
 const FOOD_TARGETS = [
-  '/src/assets/images/game_target_carrot_1785976682236.jpg',
-  '/src/assets/images/game_target_mocchi_1785976693628.jpg',
-  '/src/assets/images/game_target_apple_1785976705852.jpg',
-  '/src/assets/images/game_target_sushi_1785976716931.jpg',
-  '/src/assets/images/game_target_pizza_1785976727447.jpg',
-  '/src/assets/images/game_target_ramen_1785976738966.jpg',
+  'https://www.image2url.com/r2/default/images/1785981294992-d21b875d-6ee5-44ee-96a9-79b074044075.png',
+  'https://www.image2url.com/r2/default/images/1785981347735-83d8d341-e7ca-49a6-9556-5321b0252fff.png',
+  'https://www.image2url.com/r2/default/images/1785981379259-b9552a51-d5eb-4a71-a4a3-386e2bbf4a65.png',
   TARGET_URL
 ];
 
@@ -239,110 +237,117 @@ export default function App() {
     localStorage.setItem('gyuuun_settings', JSON.stringify(settings));
   }, [settings]);
 
+  const syncUserProfile = useCallback(async (firebaseUser: any) => {
+    if (!firebaseUser) {
+      setState('AUTH');
+      return;
+    }
+
+    try {
+      const bypassEmail = localStorage.getItem('gyuuun_admin_bypass');
+      const effectiveEmail = firebaseUser.isAnonymous ? (bypassEmail || 'guest@gyuuun.party') : firebaseUser.email;
+      const isAdmin = effectiveEmail ? ADMIN_EMAILS.includes(effectiveEmail.toLowerCase()) : false;
+
+      const docRef = doc(db, 'users', firebaseUser.uid);
+      let userData: UserProfile | null = null;
+      
+      try {
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          userData = docSnap.data() as UserProfile;
+        }
+      } catch (e) {
+        console.warn("Firestore read failed, using temporary profile", e);
+      }
+      
+      if (userData) {
+        // Force admin status if it's an admin email but doc doesn't have it
+        if (isAdmin && (!userData.isAdmin || userData.goldenCarrots < 1000000)) {
+          const updatedProfile = {
+            ...userData,
+            isAdmin: true,
+            level: 99,
+            goldenCarrots: 999999999,
+            inventory: {
+              ...userData.inventory,
+              items: Array.from(new Set([...userData.inventory.items, 'gun_laser_1', 'target_pizza_pro', 'skill_fever_boost', 'char_vampire', 'acc_top_hat', 'grand_violet_overlord']))
+            }
+          };
+          try {
+            await updateDoc(docRef, { 
+              isAdmin: true, 
+              level: 99, 
+              goldenCarrots: 999999999,
+              'inventory.items': updatedProfile.inventory.items
+            });
+          } catch (e) { console.error("Admin update failed", e); }
+          setProfile(updatedProfile);
+        } else {
+          setProfile({ ...userData, isAdmin });
+        }
+        setState('START');
+      } else {
+        // No profile yet, or firestore failed. 
+        // If it's an admin or if we just want to bypass errors, initialize now.
+        if (isAdmin || bypassEmail || firebaseUser.isAnonymous) {
+          const newProfile: UserProfile = {
+            uid: firebaseUser.uid,
+            username: isAdmin ? `Admin ${effectiveEmail?.split('@')[0]}` : `Gyuuun Player`,
+            photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${effectiveEmail || firebaseUser.uid}`,
+            email: effectiveEmail,
+            createdAt: new Date().toISOString(),
+            isAdmin: isAdmin,
+            level: isAdmin ? 99 : 1,
+            goldenCarrots: isAdmin ? 999999999 : 340,
+            inventory: {
+              items: isAdmin ? ['gun_laser_1', 'target_pizza_pro', 'skill_fever_boost', 'char_vampire', 'acc_top_hat', 'grand_violet_overlord'] : [],
+              goldenCarrots: isAdmin ? 999999999 : 340,
+              equipped: {
+                skills: isAdmin ? ['skill_fever_boost', 'grand_violet_overlord'] : [],
+                character: isAdmin ? 'char_vampire' : undefined,
+                gun: isAdmin ? 'gun_laser_1' : undefined
+              }
+            },
+            achievements: isAdmin ? ['ADMIN_BYPASS'] : [],
+            dailyStreak: 1,
+            claimedToday: true
+          };
+          try {
+            await setDoc(docRef, newProfile);
+          } catch (e) { console.error("Profile creation failed", e); }
+          setProfile(newProfile);
+          setState('START');
+        } else {
+          setState('PROFILE_SETUP');
+        }
+      }
+    } catch (err) {
+      console.error("Critical Profile Sync Error:", err);
+      // Fallback
+      setProfile({
+        uid: firebaseUser.uid,
+        username: 'Player',
+        photoURL: '',
+        email: firebaseUser.email,
+        goldenCarrots: 0,
+        inventory: { items: [], goldenCarrots: 0, equipped: { skills: [] } }
+      } as any);
+      setState('START');
+    } finally {
+      // Logic for loading end if we had a global loading state
+    }
+  }, [characters]);
+
   useEffect(() => {
     if (state === 'TITLE') return;
     if (isGuest) return;
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
-      if (firebaseUser) {
-        try {
-          const bypassEmail = localStorage.getItem('gyuuun_admin_bypass');
-          const effectiveEmail = firebaseUser.isAnonymous ? (bypassEmail || 'guest@gyuuun.party') : firebaseUser.email;
-          const isAdmin = effectiveEmail ? ADMIN_EMAILS.includes(effectiveEmail.toLowerCase()) : false;
-
-          const docRef = doc(db, 'users', firebaseUser.uid);
-          let userData: UserProfile | null = null;
-          
-          try {
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-              userData = docSnap.data() as UserProfile;
-            }
-          } catch (e) {
-            console.warn("Firestore read failed, using temporary profile", e);
-          }
-          
-          if (userData) {
-            // Force admin status if it's an admin email but doc doesn't have it
-            if (isAdmin && (!userData.isAdmin || userData.goldenCarrots < 1000000)) {
-              const updatedProfile = {
-                ...userData,
-                isAdmin: true,
-                level: 99,
-                goldenCarrots: 999999999,
-                inventory: {
-                  ...userData.inventory,
-                  items: Array.from(new Set([...userData.inventory.items, 'gun_laser_1', 'target_pizza_pro', 'skill_fever_boost', 'char_vampire', 'acc_top_hat', 'grand_violet_overlord']))
-                }
-              };
-              try {
-                await updateDoc(docRef, { 
-                  isAdmin: true, 
-                  level: 99, 
-                  goldenCarrots: 999999999,
-                  'inventory.items': updatedProfile.inventory.items
-                });
-              } catch (e) { console.error("Admin update failed", e); }
-              setProfile(updatedProfile);
-            } else {
-              setProfile({ ...userData, isAdmin });
-            }
-            setState('START');
-          } else {
-            // No profile yet, or firestore failed. 
-            // If it's an admin or if we just want to bypass errors, initialize now.
-            if (isAdmin || bypassEmail) {
-              const newProfile: UserProfile = {
-                uid: firebaseUser.uid,
-                username: isAdmin ? `Admin ${effectiveEmail?.split('@')[0]}` : `Gyuuun Player`,
-                photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${effectiveEmail || firebaseUser.uid}`,
-                email: effectiveEmail,
-                createdAt: new Date().toISOString(),
-                isAdmin: isAdmin,
-                level: isAdmin ? 99 : 1,
-                goldenCarrots: isAdmin ? 999999999 : 500,
-                inventory: {
-                  items: isAdmin ? ['gun_laser_1', 'target_pizza_pro', 'skill_fever_boost', 'char_vampire', 'acc_top_hat', 'grand_violet_overlord'] : [],
-                  goldenCarrots: isAdmin ? 999999999 : 500,
-                  equipped: {
-                    skills: isAdmin ? ['skill_fever_boost', 'grand_violet_overlord'] : [],
-                    character: isAdmin ? 'char_vampire' : undefined,
-                    gun: isAdmin ? 'gun_laser_1' : undefined
-                  }
-                },
-                achievements: isAdmin ? ['ADMIN_BYPASS'] : [],
-                dailyStreak: 1,
-                claimedToday: true
-              };
-              try {
-                await setDoc(docRef, newProfile);
-              } catch (e) { console.error("Profile creation failed", e); }
-              setProfile(newProfile);
-              setState('START');
-            } else {
-              setState('PROFILE_SETUP');
-            }
-          }
-        } catch (err) {
-          console.error("Critical Auth State Error:", err);
-          // Last ditch effort: proceed to START with a dummy profile if everything else fails
-          setProfile({
-            uid: firebaseUser.uid,
-            username: 'Emergency Player',
-            photoURL: '',
-            email: null,
-            goldenCarrots: 0,
-            inventory: { items: [], goldenCarrots: 0, equipped: { skills: [] } }
-          });
-          setState('START');
-        }
-      } else {
-        setState('AUTH');
-      }
+      syncUserProfile(firebaseUser);
     });
     return () => unsubscribe();
-  }, [state, isGuest]);
+  }, [state, isGuest, syncUserProfile]);
 
   const handleGuestPlay = () => {
     setIsGuest(true);
@@ -362,9 +367,23 @@ export default function App() {
     setState('START');
   };
 
-  const handleStart = (char: Character) => {
+  const handleStartGame = (char: Character) => {
     setSelectedCharacter(char);
     setState('PLAYING');
+  };
+
+  const handleStartApp = () => {
+    setState('PRELOADING');
+  };
+
+  const handlePreloadingComplete = () => {
+    if (isGuest) {
+      setState('START');
+    } else if (user) {
+      syncUserProfile(user);
+    } else {
+      setState('AUTH');
+    }
   };
 
   const handleFinish = async (score: ScoreBreakdown) => {
@@ -487,6 +506,53 @@ export default function App() {
       return wonItem;
     } catch (e) {
       console.error("Gacha failed", e);
+      return null;
+    }
+  };
+
+  const handleAIGacha = async (): Promise<GameItem | null> => {
+    if (!profile || profile.goldenCarrots < 500) {
+      setSystemMessage("Need 500 Golden Carrots for AI Gacha!");
+      setTimeout(() => setSystemMessage(null), 3000);
+      return null;
+    }
+
+    try {
+      const res = await fetch('/api/gacha/generate', { method: 'POST' });
+      const newItem = await res.json();
+      
+      const gameItem: GameItem = {
+        id: `ai_${Date.now()}`,
+        name: newItem.name,
+        description: newItem.description,
+        category: 'TARGET',
+        price: 0,
+        image: newItem.image,
+        rarity: newItem.rarity as any
+      };
+
+      // Add to inventory and global food targets temporarily for this session
+      FOOD_TARGETS.push(gameItem.image);
+
+      await updateDoc(doc(db, 'users', profile.uid), {
+        goldenCarrots: profile.goldenCarrots - 500,
+        'inventory.items': [...profile.inventory.items, gameItem.id]
+      });
+
+      setProfile(prev => prev ? ({
+        ...prev,
+        goldenCarrots: prev.goldenCarrots - 500,
+        inventory: {
+          ...prev.inventory,
+          items: [...prev.inventory.items, gameItem.id]
+        }
+      }) : null);
+
+      return gameItem;
+    } catch (e) {
+      console.error("AI Gacha failed", e);
+      setSystemMessage("AI Gacha service temporarily busy. Try again!");
+      setTimeout(() => setSystemMessage(null), 3000);
       return null;
     }
   };
@@ -717,14 +783,18 @@ export default function App() {
         <AnimatePresence mode="wait">
           {state === 'TITLE' && (
             <motion.div key="title" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full">
-              <TitleScreen onStart={() => setState('AUTH')} />
+              <TitleScreen onStart={handleStartApp} />
             </motion.div>
+          )}
+
+          {state === 'PRELOADING' && (
+            <LoadingScreen key="preloading" onComplete={handlePreloadingComplete} />
           )}
 
           {state === 'AUTH' && (
             <motion.div key="auth" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.1 }}>
               <Auth 
-                onAuthSuccess={() => setState('PROFILE_SETUP')} 
+                onAuthSuccess={() => syncUserProfile(auth.currentUser)} 
                 onGuestPlay={handleGuestPlay} 
               />
             </motion.div>
@@ -738,7 +808,7 @@ export default function App() {
 
           {state === 'START' && (
             <motion.div key="start" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full">
-              <StartScreen characters={characters} onStart={handleStart} />
+              <StartScreen characters={characters} onStart={handleStartGame} />
             </motion.div>
           )}
 
@@ -783,6 +853,7 @@ export default function App() {
             profile={profile} 
             onClose={() => setView('GAME')} 
             onRoll={handleRollGacha}
+            onAIRoll={handleAIGacha}
           />
         )}
       </AnimatePresence>

@@ -333,25 +333,32 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
             note.status === 'ACTIVE' && (
               <motion.div
                 key={note.id}
-                className="absolute w-[20%] h-[12%] -translate-x-1/2 -translate-y-1/2"
-                style={{ left: `${(note.lane * 25) + 12.5}%`, top: `${note.y}%` }}
+                className="absolute w-[20%] h-[12%] -translate-x-1/2 -translate-y-1/2 will-change-transform"
+                style={{ 
+                  left: `${(note.lane * 25) + 12.5}%`, 
+                  top: `${note.y}%`,
+                  transform: `translate3d(-50%, -50%, 0)`
+                }}
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 2, opacity: 0, filter: 'brightness(5) contrast(2)' }}
               >
-                <div className={`relative w-full h-full flex items-center justify-center group`}>
+                <div className="relative w-full h-full flex items-center justify-center group transform-gpu">
                   {/* Outer Glow */}
-                  <div className={`absolute inset-0 rounded-2xl blur-xl opacity-40 transition-colors ${isFever ? 'bg-red-500' : 'bg-blue-500'}`} />
+                  <div className="absolute inset-0 rounded-2xl blur-xl opacity-40 transition-colors bg-blue-500 will-change-[filter,opacity]" 
+                    style={{ backgroundColor: isFever ? '#ef4444' : '#3b82f6' }}
+                  />
                   
                   {/* Note Frame */}
-                  <div className={`relative w-16 h-16 md:w-24 md:h-24 rounded-2xl border-4 flex items-center justify-center bg-black/40 backdrop-blur-md shadow-2xl transition-colors ${
+                  <div className={`relative w-16 h-16 md:w-24 md:h-24 rounded-2xl border-4 flex items-center justify-center bg-black/40 backdrop-blur-md shadow-2xl transition-colors transform-gpu ${
                     isFever ? 'border-red-400' : 'border-blue-400'
                   }`}>
                     <img 
                       src={note.image} 
                       alt="target" 
-                      className="w-[80%] h-[80%] object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]"
+                      className="w-[80%] h-[80%] object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] transform-gpu"
                       referrerPolicy="no-referrer"
+                      loading="eager"
                     />
                     
                     {/* Inner Target Ring */}
@@ -367,19 +374,19 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
         </AnimatePresence>
       </div>
 
-      {/* Particles Layer */}
-      <div className="absolute inset-0 z-40 pointer-events-none">
+  {/* Particles Layer */}
+      <div className="absolute inset-0 z-40 pointer-events-none transform-gpu">
         {particles.map(p => (
           <div
             key={p.id}
-            className={`absolute ${p.color} rounded-full transition-opacity`}
+            className={`absolute ${p.color} rounded-full will-change-[transform,opacity] transition-opacity duration-75`}
             style={{
               left: `${p.x}%`,
               top: `${p.y}%`,
               width: `${p.scale * 12}px`,
               height: `${p.scale * 12}px`,
               opacity: p.life,
-              transform: `translate(-50%, -50%)`
+              transform: `translate3d(-50%, -50%, 0) scale(${p.life})`,
             }}
           />
         ))}

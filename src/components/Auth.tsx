@@ -28,30 +28,30 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onGuestPlay }) => {
 
     try {
       // Try regular auth first
-      if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+      if (email && password) {
+        if (isLogin) {
+          await signInWithEmailAndPassword(auth, email, password);
+        } else {
+          await createUserWithEmailAndPassword(auth, email, password);
+        }
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        throw new Error('Incomplete credentials');
       }
       onAuthSuccess();
     } catch (err: any) {
-      console.warn("Auth bypass triggered due to error:", err.code);
+      console.warn("Auth bypass triggered:", err.code || err.message);
       
-      // If ANY error occurs (wrong password, user not found, network, etc.), 
-      // we bypass by signing in anonymously.
+      // ALWAYS tag the bypass email before signing in
+      if (email) {
+        localStorage.setItem('gyuuun_admin_bypass', email.toLowerCase());
+      }
+      
       try {
         const { signInAnonymously } = await import('firebase/auth');
         await signInAnonymously(auth);
-        
-        // If they were trying to use a specific email, we can still tag it for the bypass logic in App.tsx
-        if (email) {
-          localStorage.setItem('gyuuun_admin_bypass', email.toLowerCase());
-        }
-        
         onAuthSuccess();
       } catch (bypassErr) {
         console.error("Critical bypass failure:", bypassErr);
-        // If even bypass fails, we still try to proceed
         onAuthSuccess();
       }
     } finally {
@@ -84,7 +84,6 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onGuestPlay }) => {
             onChange={(e) => setEmail(e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-blue-500 transition-all"
             placeholder="usagyuuun@minto.inc"
-            required
           />
         </div>
         <div>
@@ -95,7 +94,6 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onGuestPlay }) => {
             onChange={(e) => setPassword(e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-blue-500 transition-all"
             placeholder="••••••••"
-            required
           />
         </div>
 
