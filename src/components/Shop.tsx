@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { ShoppingBag, ArrowLeft, Star, Zap } from 'lucide-react';
 import { GameItem, UserProfile } from '../types';
 import { SHOP_ITEMS } from '../data/items';
+import { playSound } from '../lib/sound';
 
 interface ShopProps {
   profile: UserProfile;
@@ -36,7 +37,7 @@ export const Shop: React.FC<ShopProps> = ({ profile, onClose, onPurchase }) => {
         <div className="p-8 border-bottom border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button 
-              onClick={onClose}
+              onClick={() => { playSound('click'); onClose(); }}
               className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-colors"
             >
               <ArrowLeft size={24} className="text-white" />
@@ -81,7 +82,10 @@ export const Shop: React.FC<ShopProps> = ({ profile, onClose, onPurchase }) => {
 
                   <button
                     disabled={isOwned(item.id) || profile.goldenCarrots < item.price}
-                    onClick={() => onPurchase(item)}
+                    onClick={() => {
+                      playSound('purchase');
+                      onPurchase(item);
+                    }}
                     className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all ${
                       isOwned(item.id) 
                         ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' 

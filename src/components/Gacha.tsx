@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, ArrowLeft, Star, Ghost, Package, Zap } from 'lucide-react';
 import { GachaBanner, GameItem, UserProfile } from '../types';
 import { GACHA_BANNERS } from '../data/items';
+import { playSound } from '../lib/sound';
 
 interface GachaProps {
   profile: UserProfile;
@@ -18,6 +19,7 @@ export const Gacha: React.FC<GachaProps> = ({ profile, onClose, onRoll, onAIRoll
   const handleRoll = async (banner: GachaBanner) => {
     if (profile.goldenCarrots < banner.cost) return;
     
+    playSound('gacha');
     setIsRolling(true);
     setResult(null);
     
@@ -27,12 +29,14 @@ export const Gacha: React.FC<GachaProps> = ({ profile, onClose, onRoll, onAIRoll
     setTimeout(() => {
       setResult(item);
       setIsRolling(false);
+      if (item) playSound('win');
     }, 2000);
   };
 
   const handleAIRoll = async () => {
     if (profile.goldenCarrots < 500) return;
     
+    playSound('gacha');
     setIsRolling(true);
     setResult(null);
     
@@ -41,6 +45,7 @@ export const Gacha: React.FC<GachaProps> = ({ profile, onClose, onRoll, onAIRoll
     setTimeout(() => {
       setResult(item);
       setIsRolling(false);
+      if (item) playSound('win');
     }, 2000);
   };
 

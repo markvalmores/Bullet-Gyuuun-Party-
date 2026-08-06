@@ -23,6 +23,7 @@ import { DonateModal } from './components/DonateModal';
 import { Music, Volume2, VolumeX, ShieldCheck, RefreshCw, Settings as SettingsIcon, ShoppingBag, Sparkles, Users, Radio, Calendar, ZoomIn, ZoomOut, RotateCcw, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SHOP_ITEMS } from './data/items';
+import { playSound } from './lib/sound';
 
 const BACKGROUND_URL = '/src/assets/images/matsuri_night_market_1785974272760.jpg';
 const CARROT_ICON = '/src/assets/images/golden_carrot_currency_1785977909091.jpg';
@@ -497,6 +498,20 @@ export default function App() {
     }
   };
 
+  const handleUpdateBannerImage = async (url: string) => {
+    if (!profile || isGuest) return;
+    try {
+      await updateDoc(doc(db, 'users', profile.uid), {
+        bannerURL: url
+      });
+      setProfile(prev => prev ? ({ ...prev, bannerURL: url }) : null);
+      setSystemMessage("Cover Banner Updated!");
+      setTimeout(() => setSystemMessage(null), 3000);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, 'users');
+    }
+  };
+
   const handleUpdateUsername = async (name: string) => {
     if (!profile || isGuest) return;
     try {
@@ -524,6 +539,7 @@ export default function App() {
           userId: profile.uid,
           username: profile.username,
           photoURL: profile.photoURL,
+          bannerURL: profile.bannerURL || '',
           score: score.totalScore,
           combo: score.maxCombo,
           timestamp: serverTimestamp()
@@ -1117,15 +1133,20 @@ export default function App() {
             settings={settings} 
             profile={profile}
             onSave={(newSettings) => {
+              playSound('click');
               setSettings(newSettings);
               setShowSettings(false);
             }} 
-            onClose={() => setShowSettings(false)} 
+            onClose={() => {
+              playSound('click');
+              setShowSettings(false);
+            }} 
             onExport={handleExportData}
             onImport={handleImportData}
             onDeleteData={handleDeleteData}
             onManualSave={handleManualSave}
             onUpdateProfileImage={handleUpdateProfileImage}
+            onUpdateBannerImage={handleUpdateBannerImage}
             onUpdateUsername={handleUpdateUsername}
           />
         )}

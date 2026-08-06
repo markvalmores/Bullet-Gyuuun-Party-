@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Target, ScoreBreakdown, Character, FeverType, GameSettings } from '../types';
-import { Zap, Loader2, Bomb, Star, Target as TargetIcon, Crosshair } from 'lucide-react';
+import { Zap, Loader2, Bomb, Star, Target as TargetIcon, Crosshair, Heart, Flame, Sparkles } from 'lucide-react';
+import { useFeverMode } from '../hooks/useFeverMode';
+import { triggerHaptic } from '../lib/haptics';
 
 const BPM = 128;
 const BEAT_MS = (60 / BPM) * 1000;
@@ -21,10 +23,13 @@ interface Particle {
   y: number;
   vx: number;
   vy: number;
+  rotation: number;
+  vRot: number;
   life: number;
   text?: string;
   color: string;
   scale: number;
+  hasHeart?: boolean;
 }
 
 interface Note {
@@ -57,6 +62,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
   const [feverAmount, setFeverAmount] = useState(0);
   const [isFever, setIsFever] = useState(false);
   const [feverType, setFeverType] = useState<FeverType>('BLUE');
+
+  // Fever Mode Animation & Screen Shake Hook (Combo 50+)
+  const { shakeOffset, screenShake, feverBurstGlow, isCombo50Plus } = useFeverMode({ combo, isFever });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const startTimeRef = useRef<number>(Date.now());
@@ -167,19 +175,23 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
   const spawnParticles = useCallback((lane: number, y: number, isPerfect: boolean) => {
     const laneX = (lane * 25) + 12.5;
     const newParticles: Particle[] = [];
-    const count = isPerfect ? 20 : 8;
+    const count = isPerfect ? 18 : 10;
     
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 * i) / count;
-      const speed = Math.random() * 5 + (isPerfect ? 5 : 2);
+      const speed = Math.random() * 4 + (isPerfect ? 5 : 2.5);
       newParticles.push({
-        id: Math.random().toString(),
-        x: laneX, y,
+        id: Math.random().toString(36).substring(2, 9),
+        x: laneX, 
+        y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        life: 0.8,
-        color: isPerfect ? 'bg-yellow-400' : 'bg-blue-400',
-        scale: Math.random() * 0.4 + 0.4
+        rotation: Math.random() * 360,
+        vRot: (Math.random() - 0.5) * 20,
+        life: 1.0,
+        color: isPerfect ? 'text-yellow-400' : 'text-pink-400',
+        scale: Math.random() * 0.4 + (isPerfect ? 0.7 : 0.5),
+        hasHeart: true,
       });
     }
     setParticles(prev => [...prev, ...newParticles]);
@@ -214,6 +226,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
                 setFeverAmount(f => Math.min(100, f + 8));
                 spawnParticles(lane, note.y, true);
                 playSFX('PERFECT');
+                triggerHaptic('medium');
                 setIsZooming(true);
                 setTimeout(() => setIsZooming(false), 50);
               } else {
@@ -224,6 +237,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
                 setFeverAmount(f => Math.min(100, f + 4));
                 spawnParticles(lane, note.y, false);
                 playSFX('HIT');
+                triggerHaptic('light');
               }
               return { ...note, status: 'HIT' as const };
             }
@@ -320,12 +334,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
         nextSpawnRef.current = now + (spawnInterval * (0.8 + Math.random() * 0.4));
       }
 
-      // Update particles
+      // Update particles & crosshairs (<3)
       setParticles(prev => prev.map(p => ({
         ...p,
-        x: p.x + p.vx * 0.1,
-        y: p.y + p.vy * 0.1,
-        life: p.life - 0.02
+        x: p.x + p.vx * 0.12,
+        y: p.y + p.vy * 0.12,
+        rotation: p.rotation + p.vRot,
+        life: p.life - 0.025
       })).filter(p => p.life > 0));
 
       gameLoopRef.current = requestAnimationFrame(tick);
@@ -340,7 +355,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
       ref={containerRef}
       onMouseMove={handlePointerMove}
       onTouchMove={handlePointerMove}
-      className={`relative w-full h-full bg-zinc-950 overflow-hidden select-none transition-transform duration-75 ${isZooming ? 'scale-[1.02]' : 'scale-100'}`}
+      style={{
+        transform: `translate3d(${shakeOffset.x}px, ${shakeOffset.y}px, 0) scale(${isZooming ? 1.02 : 1})`,
+      }}
+      className={`relative w-full h-full bg-zinc-950 overflow-hidden select-none transition-transform duration-75 ${
+        isCombo50Plus ? 'ring-8 ring-pink-500/60 shadow-[inset_0_0_100px_rgba(244,63,94,0.5)]' : ''
+      }`}
     >
       {/* Predictive Crosshair */}
       <motion.div
@@ -465,21 +485,26 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
         </AnimatePresence>
       </div>
 
-  {/* Particles Layer */}
+      {/* Crosshairs Tap Effect Layer (<3) */}
       <div className="absolute inset-0 z-40 pointer-events-none transform-gpu">
         {particles.map(p => (
           <div
             key={p.id}
-            className={`absolute ${p.color} rounded-full will-change-[transform,opacity] transition-opacity duration-75`}
+            className={`absolute ${p.color} will-change-[transform,opacity] transition-opacity duration-75 flex items-center justify-center drop-shadow-[0_0_12px_rgba(255,255,255,0.8)]`}
             style={{
               left: `${p.x}%`,
               top: `${p.y}%`,
-              width: `${p.scale * 12}px`,
-              height: `${p.scale * 12}px`,
               opacity: p.life,
-              transform: `translate3d(-50%, -50%, 0) scale(${p.life})`,
+              transform: `translate3d(-50%, -50%, 0) scale(${p.scale * (1.2 - p.life * 0.2)}) rotate(${p.rotation}deg)`,
             }}
-          />
+          >
+            <div className="relative flex items-center justify-center">
+              <Crosshair size={Math.max(16, Math.floor(p.scale * 30))} className="text-current drop-shadow-glow" />
+              {p.hasHeart && (
+                <Heart size={Math.max(10, Math.floor(p.scale * 16))} className="absolute text-pink-400 fill-pink-400 animate-pulse" />
+              )}
+            </div>
+          </div>
         ))}
       </div>
 
@@ -609,6 +634,26 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
           </div>
         </div>
       </div>
+
+      {/* 50+ Combo Fever Banner Overlay */}
+      <AnimatePresence>
+        {isCombo50Plus && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="absolute top-28 left-1/2 -translate-x-1/2 z-[110] pointer-events-none flex flex-col items-center"
+          >
+            <div className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-pink-600 via-purple-600 to-rose-600 rounded-full border-2 border-pink-300 shadow-[0_0_50px_rgba(244,63,94,0.9)] animate-pulse">
+              <Flame size={20} className="text-yellow-300 fill-yellow-300 animate-bounce" />
+              <span className="text-xs md:text-sm font-black italic uppercase tracking-wider text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+                50+ COMBO HYPER FEVER ACTIVATED!
+              </span>
+              <Sparkles size={20} className="text-yellow-300 fill-yellow-300 animate-bounce" />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Judgment Feedback */}
       <div className="absolute top-[40%] left-1/2 -translate-x-1/2 z-100 pointer-events-none">

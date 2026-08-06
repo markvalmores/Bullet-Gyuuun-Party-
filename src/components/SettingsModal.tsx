@@ -29,6 +29,7 @@ import {
   Edit2
 } from 'lucide-react';
 import { GameSettings, UserProfile } from '../types';
+import { playSound } from '../lib/sound';
 
 interface SettingsModalProps {
   settings: GameSettings;
@@ -40,6 +41,7 @@ interface SettingsModalProps {
   onDeleteData: () => void;
   onManualSave: () => void;
   onUpdateProfileImage: (base64: string) => void;
+  onUpdateBannerImage?: (url: string) => void;
   onUpdateUsername: (name: string) => void;
 }
 
@@ -53,6 +55,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onDeleteData, 
   onManualSave,
   onUpdateProfileImage,
+  onUpdateBannerImage,
   onUpdateUsername
 }) => {
   const [localSettings, setLocalSettings] = useState<GameSettings>(settings);
@@ -62,13 +65,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [tempName, setTempName] = useState(profile?.username || "");
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const profileImageInputRef = React.useRef<HTMLInputElement>(null);
+  const bannerImageInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleImportClick = () => {
+    playSound('click');
     fileInputRef.current?.click();
   };
 
   const handleProfileImageClick = () => {
+    playSound('click');
     profileImageInputRef.current?.click();
+  };
+
+  const handleBannerImageClick = () => {
+    playSound('click');
+    bannerImageInputRef.current?.click();
+  };
+
+  const handleBannerImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 3 * 1024 * 1024) {
+        alert("Banner image too large! Please keep it under 3MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        if (onUpdateBannerImage) onUpdateBannerImage(base64);
+        playSound('purchase');
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -184,44 +212,73 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide">
           
           {/* Profile Section */}
-          <div className="bg-zinc-800/40 p-6 rounded-3xl border border-white/10 space-y-6">
+          <div className="bg-zinc-800/40 p-6 rounded-3xl border border-white/10 space-y-4">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-green-500/20 rounded-xl">
                 <User className="text-green-400" size={18} />
               </div>
               <div>
-                <h3 className="text-white font-black italic uppercase tracking-tight">Gyuuun Profile</h3>
-                <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Pilot Identification</p>
+                <h3 className="text-white font-black italic uppercase tracking-tight">Gyuuun Pilot Card</h3>
+                <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Profile Picture & Cover Banner (GIF, PNG, JPG)</p>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-              <div className="relative group">
-                <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-white/10 bg-zinc-950 shadow-2xl">
-                  {profile?.photoURL ? (
-                    <img src={profile.photoURL} alt="Profile" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-zinc-700">
-                      <User size={40} />
-                    </div>
-                  )}
-                </div>
-                <button 
-                  onClick={handleProfileImageClick}
-                  className="absolute -bottom-2 -right-2 p-2 bg-blue-600 text-white rounded-xl shadow-lg hover:bg-blue-500 transition-all active:scale-90"
-                >
-                  <Camera size={14} />
-                </button>
-                <input 
-                  type="file" 
-                  ref={profileImageInputRef} 
-                  onChange={handleProfileImageChange} 
-                  accept="image/jpeg,image/png,image/gif" 
-                  className="hidden" 
-                />
-              </div>
+            {/* Profile Card Banner & Avatar */}
+            <div className="relative w-full h-36 rounded-2xl overflow-hidden bg-zinc-950 border border-white/10 shadow-xl group">
+              {profile?.bannerURL ? (
+                <img src={profile.bannerURL} alt="Banner" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-r from-purple-900 via-indigo-900 to-pink-900 opacity-60" />
+              )}
 
-              <div className="flex-1 space-y-2 w-full text-center sm:text-left">
+              {/* Banner Upload Button */}
+              <button
+                onClick={handleBannerImageClick}
+                className="absolute top-3 right-3 px-3 py-1.5 bg-black/70 hover:bg-black/90 backdrop-blur-md rounded-xl text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 border border-white/20 transition-all active:scale-95 shadow-lg"
+              >
+                <Camera size={12} />
+                <span>Change Banner</span>
+              </button>
+              <input 
+                type="file" 
+                ref={bannerImageInputRef} 
+                onChange={handleBannerImageChange} 
+                accept="image/jpeg,image/png,image/gif,image/webp" 
+                className="hidden" 
+              />
+
+              {/* Avatar Overlay */}
+              <div className="absolute -bottom-2 left-4 flex items-end gap-3">
+                <div className="relative group/avatar">
+                  <div className="w-20 h-20 rounded-2xl overflow-hidden border-4 border-zinc-900 bg-zinc-900 shadow-2xl">
+                    {profile?.photoURL ? (
+                      <img src={profile.photoURL} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-zinc-700">
+                        <User size={36} />
+                      </div>
+                    )}
+                  </div>
+                  <button 
+                    onClick={handleProfileImageClick}
+                    className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity rounded-2xl cursor-pointer"
+                    title="Change Profile Picture"
+                  >
+                    <Camera size={16} className="text-white" />
+                  </button>
+                  <input 
+                    type="file" 
+                    ref={profileImageInputRef} 
+                    onChange={handleProfileImageChange} 
+                    accept="image/jpeg,image/png,image/gif,image/webp" 
+                    className="hidden" 
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+              <div className="flex-1 space-y-1 w-full text-center sm:text-left">
                 <div className="flex items-center justify-center sm:justify-start gap-3">
                   {isEditingName ? (
                     <div className="flex items-center gap-2 w-full max-w-xs">
@@ -239,14 +296,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   ) : (
                     <>
                       <h4 className="text-2xl font-black text-white italic tracking-tighter uppercase">{profile?.username || "Anonymous Soldier"}</h4>
-                      <button onClick={() => setIsEditingName(true)} className="p-2 hover:bg-white/10 rounded-lg text-zinc-500">
+                      <button onClick={() => { playSound('click'); setIsEditingName(true); }} className="p-2 hover:bg-white/10 rounded-lg text-zinc-500">
                         <Edit2 size={14} />
                       </button>
                     </>
                   )}
                 </div>
                 <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
-                  ID: {profile?.uid.substring(0, 12)}...
+                  Pilot ID: {profile?.uid.substring(0, 12)}...
                 </div>
               </div>
             </div>

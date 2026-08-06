@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Character } from '../types';
 import { Play, Trophy, X, Target, MousePointer2 } from 'lucide-react';
 import { Leaderboard } from './Leaderboard';
+import { playSound } from '../lib/sound';
 
 interface StartScreenProps {
   onStart: (char: Character) => void;
@@ -21,6 +22,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, characters })
 
   // Shoot to Start logic
   const handleShootStart = () => {
+    playSound('fever');
     setShowSelection(true);
   };
 

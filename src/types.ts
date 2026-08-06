@@ -21,6 +21,8 @@ export interface UserProfile {
   uid: string;
   username: string;
   photoURL: string;
+  bannerURL?: string;
+  bio?: string;
   email: string | null;
   isAdmin?: boolean;
   level?: number;
