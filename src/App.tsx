@@ -19,7 +19,8 @@ import { Shop } from './components/Shop';
 import { Gacha } from './components/Gacha';
 import { DailyCalendar } from './components/DailyCalendar';
 import { LoadingScreen } from './components/LoadingScreen';
-import { Music, Volume2, VolumeX, ShieldCheck, RefreshCw, Settings as SettingsIcon, ShoppingBag, Sparkles, Users, Radio, Calendar, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { DonateModal } from './components/DonateModal';
+import { Music, Volume2, VolumeX, ShieldCheck, RefreshCw, Settings as SettingsIcon, ShoppingBag, Sparkles, Users, Radio, Calendar, ZoomIn, ZoomOut, RotateCcw, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SHOP_ITEMS } from './data/items';
 
@@ -110,6 +111,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
   });
   const [showSettings, setShowSettings] = useState(false);
+  const [showDonate, setShowDonate] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
   const [view, setView] = useState<'GAME' | 'SHOP' | 'GACHA'>('GAME');
   const [showCalendar, setShowCalendar] = useState(false);
@@ -889,6 +891,14 @@ export default function App() {
                   <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">Rewards</span>
                 </button>
 
+                <button 
+                  onClick={() => setShowDonate(true)}
+                  className="flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-5 md:py-2.5 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-500 hover:to-rose-400 rounded-full border border-pink-300/30 text-white transition-all shadow-lg shadow-pink-500/30 active:scale-95"
+                >
+                  <Heart size={14} className="md:w-[18px] md:h-[18px] text-white fill-white" />
+                  <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">Donate</span>
+                </button>
+
                 <div className="flex gap-2">
                   <button 
                     onClick={() => setShowSettings(true)}
@@ -1034,8 +1044,16 @@ export default function App() {
         </AnimatePresence>
       </div>
 
-      {/* Zoom HUD Floating Controls */}
+      {/* Zoom & Quick Donate Floating Controls */}
       <div className="fixed bottom-6 right-6 z-[100] flex items-center gap-1.5 bg-black/80 backdrop-blur-xl px-3 py-1.5 rounded-2xl border border-white/20 shadow-2xl">
+        <button
+          onClick={() => setShowDonate(true)}
+          className="p-1.5 bg-pink-600/30 hover:bg-pink-600/50 text-pink-300 rounded-xl transition-all active:scale-90 border border-pink-500/30 mr-1"
+          title="Support / Donate"
+        >
+          <Heart size={14} className="fill-pink-400 text-pink-400" />
+        </button>
+
         <button 
           onClick={() => setZoom(prev => Math.max(prev - 0.1, 0.7))}
           className="p-1.5 hover:bg-white/10 text-white rounded-xl transition-all active:scale-90"
@@ -1085,6 +1103,13 @@ export default function App() {
       </AnimatePresence>
 
       <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_150px_rgba(0,0,0,0.9)] z-40 border-[16px] border-black/20" />
+
+      {/* Donate Overlay */}
+      <AnimatePresence>
+        {showDonate && (
+          <DonateModal onClose={() => setShowDonate(false)} />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showSettings && (

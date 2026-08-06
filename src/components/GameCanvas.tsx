@@ -255,6 +255,32 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
     if (combo > maxCombo) setMaxCombo(combo);
   }, [combo, maxCombo]);
 
+  // Universal Keyboard & Touch Controls for all devices past, present, and future
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Audio context unlock on keypress
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume();
+      }
+
+      const key = e.key.toLowerCase();
+      if (['d', 'a', '1', 'arrowleft'].includes(key)) {
+        handleLaneTap(0);
+      } else if (['f', 's', '2', 'arrowdown'].includes(key)) {
+        handleLaneTap(1);
+      } else if (['j', 'k', '3', 'arrowup'].includes(key)) {
+        handleLaneTap(2);
+      } else if (['k', 'l', '4', 'arrowright'].includes(key)) {
+        handleLaneTap(3);
+      } else if (key === ' ' || key === 'enter') {
+        triggerFever();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleLaneTap, triggerFever]);
+
   useEffect(() => {
     const tick = () => {
       const now = Date.now();
