@@ -78,7 +78,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onGuestPlay }) => {
   };
 
   return (
-    <div className="relative z-10 w-full max-w-md p-8 bg-black/80 backdrop-blur-xl border-2 border-white/10 rounded-[2.5rem] shadow-2xl">
+    <div className="relative z-10 w-full max-w-md max-h-[88vh] overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 p-6 md:p-8 bg-black/85 backdrop-blur-xl border-2 border-white/10 rounded-[2.5rem] shadow-2xl my-auto">
       <div className="flex flex-col items-center mb-8">
         <motion.div 
           animate={{ scale: [1, 1.1, 1] }}

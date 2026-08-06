@@ -19,7 +19,7 @@ import { Shop } from './components/Shop';
 import { Gacha } from './components/Gacha';
 import { DailyCalendar } from './components/DailyCalendar';
 import { LoadingScreen } from './components/LoadingScreen';
-import { Music, Volume2, VolumeX, ShieldCheck, RefreshCw, Settings as SettingsIcon, ShoppingBag, Sparkles, Users, Radio, Calendar } from 'lucide-react';
+import { Music, Volume2, VolumeX, ShieldCheck, RefreshCw, Settings as SettingsIcon, ShoppingBag, Sparkles, Users, Radio, Calendar, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SHOP_ITEMS } from './data/items';
 
@@ -113,6 +113,44 @@ export default function App() {
   const [isGuest, setIsGuest] = useState(false);
   const [view, setView] = useState<'GAME' | 'SHOP' | 'GACHA'>('GAME');
   const [showCalendar, setShowCalendar] = useState(false);
+  const [zoom, setZoom] = useState(1.0);
+  const touchDistRef = React.useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      touchDistRef.current = dist;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && touchDistRef.current !== null) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const delta = dist - touchDistRef.current;
+      touchDistRef.current = dist;
+
+      setZoom(prev => Math.min(Math.max(prev + delta * 0.005, 0.7), 2.2));
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (e.touches.length < 2) {
+      touchDistRef.current = null;
+    }
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      const delta = -e.deltaY * 0.003;
+      setZoom(prev => Math.min(Math.max(prev + delta, 0.7), 2.2));
+    }
+  };
 
   // Daily Login Logic
   useEffect(() => {
@@ -722,218 +760,266 @@ export default function App() {
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-zinc-950 font-sans selection:bg-blue-500/30 touch-none">
-      <img 
-        src={BACKGROUND_URL}
-        alt="Festival Background"
-        className="absolute inset-0 w-full h-full object-cover opacity-60 scale-105 blur-[1px]"
-        referrerPolicy="no-referrer"
-      />
+    <div 
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onWheel={handleWheel}
+      className="relative w-full h-screen overflow-hidden bg-zinc-950 font-sans selection:bg-blue-500/30 touch-none"
+    >
+      <div 
+        className="w-full h-full origin-center transition-transform duration-75 ease-out"
+        style={{ transform: `scale(${zoom})` }}
+      >
+        <img 
+          src={BACKGROUND_URL}
+          alt="Festival Background"
+          className="absolute inset-0 w-full h-full object-cover opacity-60 scale-105 blur-[1px]"
+          referrerPolicy="no-referrer"
+        />
 
-      {/* Global Stats Overlay */}
-      <div className="absolute bottom-6 left-6 z-50 flex items-center gap-4">
-        <div className="flex items-center gap-4 bg-black/60 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/10">
-          <div className="flex items-center gap-2 border-r border-white/10 pr-4">
-            <Users size={16} className="text-blue-400" />
-            <div className="flex flex-col">
-              <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Registered</span>
-              <span className="text-sm font-black text-white">{totalPlayers.toLocaleString()}</span>
+        {/* Global Stats Overlay */}
+        <div className="absolute bottom-6 left-6 z-50 flex items-center gap-4">
+          <div className="flex items-center gap-4 bg-black/60 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/10">
+            <div className="flex items-center gap-2 border-r border-white/10 pr-4">
+              <Users size={16} className="text-blue-400" />
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Registered</span>
+                <span className="text-sm font-black text-white">{totalPlayers.toLocaleString()}</span>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Radio size={16} className="text-green-400 animate-pulse" />
-            <div className="flex flex-col">
-              <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Live</span>
-              <span className="text-sm font-black text-white">{livePlayers} Playing</span>
+            <div className="flex items-center gap-2">
+              <Radio size={16} className="text-green-400 animate-pulse" />
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Live</span>
+                <span className="text-sm font-black text-white">{livePlayers} Playing</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Header Navigation - Shown only in Lobby (START) or RESULTS to avoid overlap and clutter */}
-      <AnimatePresence>
-        {(state === 'START' || state === 'RESULTS') && (
-          <motion.div 
-            initial={{ y: -100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -100, opacity: 0 }}
-            className="absolute top-0 left-0 right-0 z-50 p-4 md:p-6 flex flex-wrap justify-between items-start gap-4 pointer-events-none"
-          >
-            {/* Left Side Controls */}
-            <div className="flex flex-wrap items-center gap-2 md:gap-4 pointer-events-auto">
-              <motion.div 
-                onClick={runAntiVirus}
-                className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 md:px-4 md:py-2 rounded-full border border-white/20 cursor-pointer hover:bg-black/80 transition-all shadow-lg"
-              >
-                <ShieldCheck size={14} className="text-green-400" />
-                <span className="text-[9px] md:text-[10px] font-black text-white uppercase tracking-widest hidden sm:inline">Secure State</span>
-              </motion.div>
+        {/* Header Navigation - Shown only in Lobby (START) or RESULTS to avoid overlap and clutter */}
+        <AnimatePresence>
+          {(state === 'START' || state === 'RESULTS') && (
+            <motion.div 
+              initial={{ y: -100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -100, opacity: 0 }}
+              className="absolute top-0 left-0 right-0 z-50 p-4 md:p-6 flex flex-wrap justify-between items-start gap-4 pointer-events-none"
+            >
+              {/* Left Side Controls */}
+              <div className="flex flex-wrap items-center gap-2 md:gap-4 pointer-events-auto">
+                <motion.div 
+                  onClick={runAntiVirus}
+                  className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 md:px-4 md:py-2 rounded-full border border-white/20 cursor-pointer hover:bg-black/80 transition-all shadow-lg"
+                >
+                  <ShieldCheck size={14} className="text-green-400" />
+                  <span className="text-[9px] md:text-[10px] font-black text-white uppercase tracking-widest hidden sm:inline">Secure State</span>
+                </motion.div>
 
-              <button 
-                onClick={refreshSystem}
-                title="Auto-Fix System"
-                className="p-2 bg-black/60 backdrop-blur-md rounded-full border border-white/20 hover:bg-white/10 transition-all shadow-lg"
-              >
-                <RefreshCw size={14} className="text-white" />
-              </button>
+                <button 
+                  onClick={refreshSystem}
+                  title="Auto-Fix System"
+                  className="p-2 bg-black/60 backdrop-blur-md rounded-full border border-white/20 hover:bg-white/10 transition-all shadow-lg"
+                >
+                  <RefreshCw size={14} className="text-white" />
+                </button>
 
-              {profile && (
-                <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-2 py-1 md:px-3 md:py-1.5 rounded-full border border-white/10 shadow-lg">
-                  <img src={profile.photoURL} alt="pfp" className="w-5 h-5 md:w-6 md:h-6 rounded-full border border-white/20" referrerPolicy="no-referrer" />
-                  <div className="flex items-center gap-2 md:gap-3 px-1">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] md:text-xs font-bold text-white tracking-tight leading-none truncate max-w-[80px] md:max-w-none">{profile.username}</span>
-                      {profile.isAdmin && (
-                        <span className="text-[7px] md:text-[8px] font-black text-yellow-400 uppercase tracking-widest mt-0.5">Admin</span>
-                      )}
-                    </div>
-                    <div className="h-4 md:h-6 w-[1px] bg-white/10" />
-                    <div className="flex items-center gap-1 md:gap-1.5">
-                      <img src={CARROT_ICON} className="w-3 h-3 md:w-4 md:h-4" />
-                      <span className="text-[10px] md:text-xs font-black text-yellow-400">{profile.goldenCarrots?.toLocaleString()}</span>
+                {profile && (
+                  <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-2 py-1 md:px-3 md:py-1.5 rounded-full border border-white/10 shadow-lg">
+                    <img src={profile.photoURL} alt="pfp" className="w-5 h-5 md:w-6 md:h-6 rounded-full border border-white/20" referrerPolicy="no-referrer" />
+                    <div className="flex items-center gap-2 md:gap-3 px-1">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] md:text-xs font-bold text-white tracking-tight leading-none truncate max-w-[80px] md:max-w-none">{profile.username}</span>
+                        {profile.isAdmin && (
+                          <span className="text-[7px] md:text-[8px] font-black text-yellow-400 uppercase tracking-widest mt-0.5">Admin</span>
+                        )}
+                      </div>
+                      <div className="h-4 md:h-6 w-[1px] bg-white/10" />
+                      <div className="flex items-center gap-1 md:gap-1.5">
+                        <img src={CARROT_ICON} className="w-3 h-3 md:w-4 md:h-4" />
+                        <span className="text-[10px] md:text-xs font-black text-yellow-400">{profile.goldenCarrots?.toLocaleString()}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-
-            {/* Right Side Actions */}
-            <div className="flex flex-wrap items-center justify-end gap-2 md:gap-3 pointer-events-auto">
-              <button 
-                onClick={() => setView('SHOP')}
-                className="flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-5 md:py-2.5 bg-blue-600 hover:bg-blue-500 rounded-full border border-white/20 text-white transition-all shadow-lg shadow-blue-600/20 active:scale-95"
-              >
-                <ShoppingBag size={14} className="md:w-[18px] md:h-[18px]" />
-                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">Shop</span>
-              </button>
-
-              <button 
-                onClick={() => setView('GACHA')}
-                className="flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-5 md:py-2.5 bg-purple-600 hover:bg-purple-500 rounded-full border border-white/20 text-white transition-all shadow-lg shadow-purple-600/20 active:scale-95"
-              >
-                <Sparkles size={14} className="md:w-[18px] md:h-[18px]" />
-                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">Gacha</span>
-              </button>
-
-              <button 
-                onClick={() => setShowCalendar(true)}
-                className="flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-5 md:py-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-full border border-white/10 text-white transition-all shadow-lg active:scale-95"
-              >
-                <Calendar size={14} className="md:w-[18px] md:h-[18px]" />
-                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">Rewards</span>
-              </button>
-
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => setShowSettings(true)}
-                  className="p-2 md:p-3 bg-black/60 backdrop-blur-md rounded-full border border-white/20 hover:bg-white/20 transition-colors shadow-lg active:scale-95"
-                >
-                  <SettingsIcon size={16} className="md:w-[20px] md:h-[20px] text-white" />
-                </button>
-                <button 
-                  onClick={() => setIsMuted(!isMuted)}
-                  className="p-2 md:p-3 bg-black/60 backdrop-blur-md rounded-full border border-white/20 hover:bg-white/20 transition-colors shadow-lg active:scale-95"
-                >
-                  {isMuted ? (
-                    <VolumeX size={16} className="md:w-[20px] md:h-[20px] text-red-400" />
-                  ) : (
-                    <Volume2 size={16} className="md:w-[20px] md:h-[20px] text-white" />
-                  )}
-                </button>
+                )}
               </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      <div className="relative w-full h-full flex items-center justify-center">
-        <AnimatePresence mode="wait">
-          {state === 'TITLE' && (
-            <motion.div key="title" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full">
-              <TitleScreen onStart={handleStartApp} />
+              {/* Right Side Actions */}
+              <div className="flex flex-wrap items-center justify-end gap-2 md:gap-3 pointer-events-auto">
+                <button 
+                  onClick={() => setView('SHOP')}
+                  className="flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-5 md:py-2.5 bg-blue-600 hover:bg-blue-500 rounded-full border border-white/20 text-white transition-all shadow-lg shadow-blue-600/20 active:scale-95"
+                >
+                  <ShoppingBag size={14} className="md:w-[18px] md:h-[18px]" />
+                  <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">Shop</span>
+                </button>
+
+                <button 
+                  onClick={() => setView('GACHA')}
+                  className="flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-5 md:py-2.5 bg-purple-600 hover:bg-purple-500 rounded-full border border-white/20 text-white transition-all shadow-lg shadow-purple-600/20 active:scale-95"
+                >
+                  <Sparkles size={14} className="md:w-[18px] md:h-[18px]" />
+                  <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">Gacha</span>
+                </button>
+
+                <button 
+                  onClick={() => setShowCalendar(true)}
+                  className="flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-5 md:py-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-full border border-white/10 text-white transition-all shadow-lg active:scale-95"
+                >
+                  <Calendar size={14} className="md:w-[18px] md:h-[18px]" />
+                  <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">Rewards</span>
+                </button>
+
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setShowSettings(true)}
+                    className="p-2 md:p-3 bg-black/60 backdrop-blur-md rounded-full border border-white/20 hover:bg-white/20 transition-colors shadow-lg active:scale-95"
+                  >
+                    <SettingsIcon size={16} className="md:w-[20px] md:h-[20px] text-white" />
+                  </button>
+                  <button 
+                    onClick={() => setIsMuted(!isMuted)}
+                    className="p-2 md:p-3 bg-black/60 backdrop-blur-md rounded-full border border-white/20 hover:bg-white/20 transition-colors shadow-lg active:scale-95"
+                  >
+                    {isMuted ? (
+                      <VolumeX size={16} className="md:w-[20px] md:h-[20px] text-red-400" />
+                    ) : (
+                      <Volume2 size={16} className="md:w-[20px] md:h-[20px] text-white" />
+                    )}
+                  </button>
+                </div>
+              </div>
             </motion.div>
           )}
+        </AnimatePresence>
 
-          {state === 'PRELOADING' && (
-            <LoadingScreen key="preloading" onComplete={handlePreloadingComplete} />
+        <div className="relative w-full h-full flex items-center justify-center">
+          <AnimatePresence mode="wait">
+            {state === 'TITLE' && (
+              <motion.div key="title" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full">
+                <TitleScreen onStart={handleStartApp} />
+              </motion.div>
+            )}
+
+            {state === 'PRELOADING' && (
+              <LoadingScreen key="preloading" onComplete={handlePreloadingComplete} />
+            )}
+
+            {state === 'AUTH' && (
+              <motion.div key="auth" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.1 }} className="w-full h-full flex items-center justify-center p-4 overflow-y-auto">
+                <Auth 
+                  onAuthSuccess={() => {
+                    // Wait a bit for auth state to propagate if needed
+                    setTimeout(() => {
+                      if (auth.currentUser) syncUserProfile(auth.currentUser);
+                    }, 100);
+                  }} 
+                  onGuestPlay={handleGuestPlay} 
+                />
+              </motion.div>
+            )}
+
+            {state === 'START' && (
+              <motion.div key="start" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full">
+                <StartScreen characters={characters} onStart={handleStartGame} />
+              </motion.div>
+            )}
+
+            {state === 'PLAYING' && selectedCharacter && (
+              <motion.div key="playing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full">
+                <GameCanvas 
+                  character={selectedCharacter} 
+                  onFinish={handleFinish} 
+                  targetImages={FOOD_TARGETS}
+                  settings={settings}
+                />
+              </motion.div>
+            )}
+
+            {state === 'RESULTS' && lastScore && selectedCharacter && (
+              <motion.div key="results" initial={{ opacity: 0, scale: 1.1 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="w-full h-full">
+                <ResultsScreen 
+                  score={lastScore} 
+                  character={selectedCharacter} 
+                  onRetry={handleRetry} 
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Shop Overlay */}
+        <AnimatePresence>
+          {view === 'SHOP' && profile && (
+            <Shop 
+              profile={profile} 
+              onClose={() => setView('GAME')} 
+              onPurchase={handlePurchase}
+            />
           )}
+        </AnimatePresence>
 
-          {state === 'AUTH' && (
-            <motion.div key="auth" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.1 }}>
-              <Auth 
-                onAuthSuccess={() => {
-                  // Wait a bit for auth state to propagate if needed
-                  setTimeout(() => {
-                    if (auth.currentUser) syncUserProfile(auth.currentUser);
-                  }, 100);
-                }} 
-                onGuestPlay={handleGuestPlay} 
-              />
-            </motion.div>
+        {/* Gacha Overlay */}
+        <AnimatePresence>
+          {view === 'GACHA' && profile && (
+            <Gacha 
+              profile={profile} 
+              onClose={() => setView('GAME')} 
+              onRoll={handleRollGacha}
+              onAIRoll={handleAIGacha}
+            />
           )}
+        </AnimatePresence>
 
-          {state === 'START' && (
-            <motion.div key="start" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full">
-              <StartScreen characters={characters} onStart={handleStartGame} />
-            </motion.div>
-          )}
-
-          {state === 'PLAYING' && selectedCharacter && (
-            <motion.div key="playing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full">
-              <GameCanvas 
-                character={selectedCharacter} 
-                onFinish={handleFinish} 
-                targetImages={FOOD_TARGETS}
-                settings={settings}
-              />
-            </motion.div>
-          )}
-
-          {state === 'RESULTS' && lastScore && selectedCharacter && (
-            <motion.div key="results" initial={{ opacity: 0, scale: 1.1 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="w-full h-full">
-              <ResultsScreen 
-                score={lastScore} 
-                character={selectedCharacter} 
-                onRetry={handleRetry} 
-              />
-            </motion.div>
+        {/* Calendar Overlay */}
+        <AnimatePresence>
+          {showCalendar && profile && (
+            <DailyCalendar 
+              profile={profile}
+              onClose={() => setShowCalendar(false)}
+              onClaim={handleClaimDaily}
+            />
           )}
         </AnimatePresence>
       </div>
 
-      {/* Shop Overlay */}
-      <AnimatePresence>
-        {view === 'SHOP' && profile && (
-          <Shop 
-            profile={profile} 
-            onClose={() => setView('GAME')} 
-            onPurchase={handlePurchase}
-          />
-        )}
-      </AnimatePresence>
+      {/* Zoom HUD Floating Controls */}
+      <div className="fixed bottom-6 right-6 z-[100] flex items-center gap-1.5 bg-black/80 backdrop-blur-xl px-3 py-1.5 rounded-2xl border border-white/20 shadow-2xl">
+        <button 
+          onClick={() => setZoom(prev => Math.max(prev - 0.1, 0.7))}
+          className="p-1.5 hover:bg-white/10 text-white rounded-xl transition-all active:scale-90"
+          title="Zoom Out (Pinch in)"
+        >
+          <ZoomOut size={14} />
+        </button>
+        
+        <button 
+          onClick={() => setZoom(1.0)}
+          className="px-2 py-0.5 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 rounded-lg text-[10px] font-black text-blue-400 italic transition-all"
+          title="Reset Zoom (100%)"
+        >
+          {Math.round(zoom * 100)}%
+        </button>
 
-      {/* Gacha Overlay */}
-      <AnimatePresence>
-        {view === 'GACHA' && profile && (
-          <Gacha 
-            profile={profile} 
-            onClose={() => setView('GAME')} 
-            onRoll={handleRollGacha}
-            onAIRoll={handleAIGacha}
-          />
-        )}
-      </AnimatePresence>
+        <button 
+          onClick={() => setZoom(prev => Math.min(prev + 0.1, 2.2))}
+          className="p-1.5 hover:bg-white/10 text-white rounded-xl transition-all active:scale-90"
+          title="Zoom In (Pinch out)"
+        >
+          <ZoomIn size={14} />
+        </button>
 
-      {/* Calendar Overlay */}
-      <AnimatePresence>
-        {showCalendar && profile && (
-          <DailyCalendar 
-            profile={profile}
-            onClose={() => setShowCalendar(false)}
-            onClaim={handleClaimDaily}
-          />
+        {Math.abs(zoom - 1.0) > 0.01 && (
+          <button 
+            onClick={() => setZoom(1.0)}
+            className="p-1.5 hover:bg-white/10 text-zinc-400 hover:text-white rounded-xl transition-all"
+            title="Reset Zoom"
+          >
+            <RotateCcw size={12} />
+          </button>
         )}
-      </AnimatePresence>
+      </div>
 
       <AnimatePresence>
         {systemMessage && (
