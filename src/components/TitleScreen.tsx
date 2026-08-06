@@ -16,10 +16,9 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart }) => {
     <div className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden">
       {/* Background Image */}
       <img 
-        src="https://www.image2url.com/r2/default/images/1785975835256-0b878e0d-31b6-4eb0-967a-7ce685bb7418.png" 
-        alt="Bullet Gyuuun Party!!!" 
+        src="/src/assets/images/festival_background.jpg" 
+        alt="Bullet Gyuuuun Party!!!" 
         className="absolute inset-0 w-full h-full object-cover"
-        referrerPolicy="no-referrer"
       />
       
       {/* Dark Overlay for contrast */}

@@ -25,7 +25,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { SHOP_ITEMS } from './data/items';
 import { playSound } from './lib/sound';
 
-const BACKGROUND_URL = '/src/assets/images/matsuri_night_market_1785974272760.jpg';
+const BACKGROUND_URL = '/src/assets/images/festival_background.jpg';
 const CARROT_ICON = '/src/assets/images/golden_carrot_currency_1785977909091.jpg';
 
 const ADMIN_EMAILS = [
