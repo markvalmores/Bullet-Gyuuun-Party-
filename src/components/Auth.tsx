@@ -28,9 +28,14 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onGuestPlay }) => {
       setLoading(true);
       try {
         const { signInAnonymously } = await import('firebase/auth');
-        await signInAnonymously(auth);
-        onAuthSuccess();
+        await Promise.race([
+          signInAnonymously(auth),
+          new Promise((resolve) => setTimeout(resolve, 1000))
+        ]);
       } catch (err) {
+        console.warn("Admin signin timeout/bypass:", err);
+      } finally {
+        setLoading(false);
         onAuthSuccess();
       }
     } else {
@@ -44,14 +49,21 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onGuestPlay }) => {
     setError('');
     setLoading(true);
 
+    if (email) {
+      localStorage.setItem('gyuuun_admin_bypass', email.toLowerCase());
+    }
+
     try {
-      // Try regular auth first
+      // Try regular auth with timeout fallback
       if (email && password) {
-        if (isLogin) {
-          await signInWithEmailAndPassword(auth, email, password);
-        } else {
-          await createUserWithEmailAndPassword(auth, email, password);
-        }
+        const authPromise = isLogin
+          ? signInWithEmailAndPassword(auth, email, password)
+          : createUserWithEmailAndPassword(auth, email, password);
+
+        await Promise.race([
+          authPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Auth timeout')), 1500))
+        ]);
       } else {
         throw new Error('Incomplete credentials');
       }
@@ -59,17 +71,15 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onGuestPlay }) => {
     } catch (err: any) {
       console.warn("Auth bypass triggered:", err.code || err.message);
       
-      // ALWAYS tag the bypass email before signing in
-      if (email) {
-        localStorage.setItem('gyuuun_admin_bypass', email.toLowerCase());
-      }
-      
       try {
         const { signInAnonymously } = await import('firebase/auth');
-        await signInAnonymously(auth);
-        onAuthSuccess();
+        await Promise.race([
+          signInAnonymously(auth),
+          new Promise((resolve) => setTimeout(resolve, 1000))
+        ]);
       } catch (bypassErr) {
         console.error("Critical bypass failure:", bypassErr);
+      } finally {
         onAuthSuccess();
       }
     } finally {

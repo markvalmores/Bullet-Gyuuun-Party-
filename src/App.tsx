@@ -299,6 +299,8 @@ export default function App() {
         console.warn("Firestore read failed, using temporary profile", e);
       }
       
+      let finalProfile: UserProfile;
+
       if (userData) {
         // If they used the bypass, upgrade their existing profile to admin status
         if (isAdmin && !userData.isAdmin) {
@@ -310,7 +312,7 @@ export default function App() {
             inventory: {
               ...userData.inventory,
               goldenCarrots: 999999999,
-              items: Array.from(new Set([...userData.inventory.items, 'gun_laser_1', 'target_pizza_pro', 'skill_fever_boost', 'char_vampire', 'acc_top_hat', 'grand_violet_overlord']))
+              items: Array.from(new Set([...(userData.inventory?.items || []), 'gun_laser_1', 'target_pizza_pro', 'skill_fever_boost', 'char_vampire', 'acc_top_hat', 'grand_violet_overlord']))
             }
           };
           try {
@@ -322,17 +324,16 @@ export default function App() {
               'inventory.items': upgradedProfile.inventory.items
             });
           } catch (e) { console.warn("Admin upgrade failed", e); }
-          setProfile(upgradedProfile);
+          finalProfile = upgradedProfile;
         } else {
-          setProfile({ ...userData, isAdmin });
+          finalProfile = { ...userData, isAdmin };
         }
-        setState('START');
       } else {
         // No profile yet, create one immediately to avoid PROFILE_SETUP screen
         const playerNum = totalPlayers + 1;
         const newProfile: UserProfile = {
           uid: firebaseUser.uid,
-          username: isAdmin ? `Admin ${effectiveEmail?.split('@')[0]}` : `Soldier Gyuuun #${playerNum}`,
+          username: isAdmin ? `Admin ${effectiveEmail?.split('@')[0] || 'Overlord'}` : `Soldier Gyuuun #${playerNum}`,
           photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${effectiveEmail || firebaseUser.uid}`,
           email: effectiveEmail,
           createdAt: new Date().toISOString(),
@@ -359,25 +360,42 @@ export default function App() {
             totalPlayers: increment(1)
           });
         } catch (e) { console.warn("Profile creation or counter update failed", e); }
-        setProfile(newProfile);
+        finalProfile = newProfile;
+      }
+
+      setProfile(finalProfile);
+
+      if (isAdmin) {
+        setSelectedCharacter(prev => prev || characters[0] || INITIAL_CHARACTERS[0]);
+        setState('PLAYING');
+      } else {
         setState('START');
       }
     } catch (err) {
       console.error("Critical Profile Sync Error:", err);
-      // Fallback
-      setProfile({
-        uid: firebaseUser.uid,
-        username: 'Player',
+      const overlordBypass = localStorage.getItem('gyuuun_overlord_bypass') === 'true';
+      const bypassEmail = localStorage.getItem('gyuuun_admin_bypass');
+      const isAdmin = overlordBypass || (bypassEmail && ADMIN_EMAILS.includes(bypassEmail.toLowerCase()));
+
+      const fallbackProfile: UserProfile = {
+        uid: firebaseUser?.uid || 'admin-fallback',
+        username: isAdmin ? 'Admin Overlord' : 'Player',
         photoURL: '',
-        email: firebaseUser.email,
-        goldenCarrots: 0,
-        inventory: { items: [], goldenCarrots: 0, equipped: { skills: [] } }
-      } as any);
-      setState('START');
-    } finally {
-      // Logic for loading end if we had a global loading state
+        email: firebaseUser?.email || bypassEmail,
+        isAdmin: !!isAdmin,
+        goldenCarrots: isAdmin ? 999999999 : 0,
+        inventory: { items: [], goldenCarrots: isAdmin ? 999999999 : 0, equipped: { skills: [] } }
+      } as any;
+
+      setProfile(fallbackProfile);
+      if (isAdmin) {
+        setSelectedCharacter(characters[0] || INITIAL_CHARACTERS[0]);
+        setState('PLAYING');
+      } else {
+        setState('START');
+      }
     }
-  }, [characters]);
+  }, [characters, totalPlayers]);
 
   useEffect(() => {
     if (state === 'TITLE' || state === 'PRELOADING') return;
@@ -910,10 +928,42 @@ export default function App() {
               <motion.div key="auth" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.1 }} className="w-full h-full flex items-center justify-center p-4 overflow-y-auto">
                 <Auth 
                   onAuthSuccess={() => {
-                    // Wait a bit for auth state to propagate if needed
-                    setTimeout(() => {
-                      if (auth.currentUser) syncUserProfile(auth.currentUser);
-                    }, 100);
+                    const overlordBypass = localStorage.getItem('gyuuun_overlord_bypass') === 'true';
+                    const bypassEmail = localStorage.getItem('gyuuun_admin_bypass');
+                    const isBypassAdmin = overlordBypass || (bypassEmail && ADMIN_EMAILS.includes(bypassEmail.toLowerCase()));
+
+                    if (auth.currentUser) {
+                      syncUserProfile(auth.currentUser);
+                    } else {
+                      const effectiveEmail = bypassEmail || (isBypassAdmin ? 'admin@gyuuun.party' : 'player@gyuuun.party');
+                      const adminProfile: UserProfile = {
+                        uid: 'admin-' + Date.now(),
+                        username: isBypassAdmin ? 'Admin Overlord' : 'Gyuuun Player',
+                        photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${effectiveEmail}`,
+                        email: effectiveEmail,
+                        createdAt: new Date().toISOString(),
+                        isAdmin: !!isBypassAdmin,
+                        level: isBypassAdmin ? 99 : 1,
+                        goldenCarrots: isBypassAdmin ? 999999999 : 340,
+                        inventory: {
+                          items: isBypassAdmin ? ['gun_laser_1', 'target_pizza_pro', 'skill_fever_boost', 'char_vampire', 'acc_top_hat', 'grand_violet_overlord'] : [],
+                          goldenCarrots: isBypassAdmin ? 999999999 : 340,
+                          equipped: {
+                            skills: isBypassAdmin ? ['skill_fever_boost', 'grand_violet_overlord'] : [],
+                            character: isBypassAdmin ? 'char_vampire' : undefined,
+                            gun: isBypassAdmin ? 'gun_laser_1' : undefined
+                          }
+                        },
+                        achievements: isBypassAdmin ? ['ADMIN_BYPASS'] : [],
+                        dailyStreak: 1,
+                        claimedToday: true
+                      };
+                      
+                      setProfile(adminProfile);
+                      const defaultChar = characters[0] || INITIAL_CHARACTERS[0];
+                      setSelectedCharacter(defaultChar);
+                      setState(isBypassAdmin ? 'PLAYING' : 'START');
+                    }
                   }} 
                   onGuestPlay={handleGuestPlay} 
                 />
