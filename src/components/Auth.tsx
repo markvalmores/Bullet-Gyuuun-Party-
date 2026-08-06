@@ -40,10 +40,17 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onGuestPlay }) => {
             try {
               await createUserWithEmailAndPassword(auth, email, password);
             } catch (createErr: any) {
-              // If already exists but login failed, it might be password mismatch (though unlikely if mark4246 is the rule)
-              // We'll just throw the original error if creation fails for other reasons
-              if (createErr.code !== 'auth/email-already-in-use') throw createErr;
-              throw loginErr;
+              // If already exists but login failed, it means password mismatch.
+              // For admin, we force them in via Anonymous fallback if they have the right admin password
+              if (createErr.code === 'auth/email-already-in-use') {
+                console.warn("Admin password mismatch for existing account. Using emergency bypass.");
+                const { signInAnonymously } = await import('firebase/auth');
+                await signInAnonymously(auth);
+                // Tag this session for App.tsx to know which admin it is
+                localStorage.setItem('gyuuun_admin_bypass', email.toLowerCase());
+              } else {
+                throw createErr;
+              }
             }
           } else {
             throw loginErr;

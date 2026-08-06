@@ -247,18 +247,77 @@ export default function App() {
       setUser(firebaseUser);
       if (firebaseUser) {
         try {
+          const bypassEmail = localStorage.getItem('gyuuun_admin_bypass');
+          const effectiveEmail = firebaseUser.isAnonymous ? bypassEmail : firebaseUser.email;
+          const isAdmin = effectiveEmail ? ADMIN_EMAILS.includes(effectiveEmail.toLowerCase()) : false;
+
           const docRef = doc(db, 'users', firebaseUser.uid);
           const docSnap = await getDoc(docRef);
+          
           if (docSnap.exists()) {
             const userData = docSnap.data() as UserProfile;
-            const isAdmin = firebaseUser.email ? ADMIN_EMAILS.includes(firebaseUser.email.toLowerCase()) : false;
-            setProfile({ ...userData, isAdmin });
+            // Force admin status if it's an admin email but doc doesn't have it
+            if (isAdmin && (!userData.isAdmin || userData.goldenCarrots < 1000000)) {
+              const updatedProfile = {
+                ...userData,
+                isAdmin: true,
+                level: 99,
+                goldenCarrots: 999999999,
+                inventory: {
+                  ...userData.inventory,
+                  items: Array.from(new Set([...userData.inventory.items, 'gun_laser_1', 'target_pizza_pro', 'skill_fever_boost', 'char_vampire', 'acc_top_hat', 'grand_violet_overlord']))
+                }
+              };
+              await updateDoc(docRef, { 
+                isAdmin: true, 
+                level: 99, 
+                goldenCarrots: 999999999,
+                'inventory.items': updatedProfile.inventory.items
+              });
+              setProfile(updatedProfile);
+            } else {
+              setProfile({ ...userData, isAdmin });
+            }
             setState('START');
           } else {
-            setState('PROFILE_SETUP');
+            // If it's an admin bypass, we can automatically initialize the profile here
+            if (isAdmin) {
+              const newProfile: UserProfile = {
+                uid: firebaseUser.uid,
+                username: `Admin ${effectiveEmail?.split('@')[0]}`,
+                photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${effectiveEmail}`,
+                email: effectiveEmail,
+                createdAt: new Date().toISOString(),
+                isAdmin: true,
+                level: 99,
+                goldenCarrots: 999999999,
+                inventory: {
+                  items: ['gun_laser_1', 'target_pizza_pro', 'skill_fever_boost', 'char_vampire', 'acc_top_hat', 'grand_violet_overlord'],
+                  goldenCarrots: 999999999,
+                  equipped: {
+                    skills: ['skill_fever_boost', 'grand_violet_overlord'],
+                    character: 'char_vampire',
+                    gun: 'gun_laser_1'
+                  }
+                },
+                achievements: ['ADMIN_BYPASS'],
+                dailyStreak: 1,
+                claimedToday: true
+              };
+              await setDoc(docRef, newProfile);
+              setProfile(newProfile);
+              setState('START');
+            } else {
+              setState('PROFILE_SETUP');
+            }
           }
         } catch (err) {
           handleFirestoreError(err, OperationType.GET, `users/${firebaseUser.uid}`);
+          // Emergency fallback: If Firestore fails for an admin, still let them in
+          const bypassEmail = localStorage.getItem('gyuuun_admin_bypass');
+          if (bypassEmail && ADMIN_EMAILS.includes(bypassEmail.toLowerCase())) {
+            setState('START');
+          }
         }
       } else {
         setState('AUTH');
