@@ -1,0 +1,30 @@
+{
+  "collections": {
+    "users": {
+      "documents": {
+        "userId": {
+          "fields": {
+            "username": "string",
+            "photoURL": "string",
+            "email": "string",
+            "createdAt": "timestamp"
+          }
+        }
+      }
+    },
+    "scores": {
+      "documents": {
+        "scoreId": {
+          "fields": {
+            "userId": "string",
+            "username": "string",
+            "photoURL": "string",
+            "score": "number",
+            "combo": "number",
+            "timestamp": "timestamp"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,260 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Settings, 
+  MousePointer2, 
+  Zap, 
+  Clock, 
+  Smartphone, 
+  Monitor, 
+  Gamepad2, 
+  Tv, 
+  ChevronRight, 
+  Save, 
+  X,
+  Target,
+  Cpu
+} from 'lucide-react';
+import { GameSettings } from '../types';
+
+interface SettingsModalProps {
+  settings: GameSettings;
+  onSave: (newSettings: GameSettings) => void;
+  onClose: () => void;
+}
+
+export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose }) => {
+  const [localSettings, setLocalSettings] = useState<GameSettings>(settings);
+  const [isCalibrating, setIsCalibrating] = useState(false);
+  const [calibrationData, setCalibrationData] = useState<number[]>([]);
+
+  // Simple Device Detection
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    let deviceType = "PC";
+    let os = "Web";
+
+    if (/Android/i.test(ua)) {
+      deviceType = "Mobile/Handheld";
+      os = "Android";
+      const match = ua.match(/Android\s([0-9\.]+)/);
+      if (match) os += ` ${match[1]}`;
+    } else if (/iPhone|iPad|iPod/i.test(ua)) {
+      deviceType = "Mobile/Handheld";
+      os = "iOS";
+    } else if (/Samsung|SM-|GT-/i.test(ua)) {
+      deviceType = "Samsung Device";
+      os = "Android";
+    } else if (/Nintendo Switch/i.test(ua)) {
+      deviceType = "Console (Switch)";
+      os = "Horizon OS";
+    } else if (/PlayStation/i.test(ua)) {
+      deviceType = "Console (PS)";
+      os = "FreeBSD/Orbis";
+    } else if (/Smart-TV|Tizen|NetCast|Web0S/i.test(ua)) {
+      deviceType = "Smart TV";
+      os = "TV OS";
+    }
+
+    setLocalSettings(prev => ({ ...prev, deviceType, os }));
+  }, []);
+
+  const handleCalibrate = () => {
+    setIsCalibrating(true);
+    setCalibrationData([]);
+  };
+
+  const onCalibrateHit = () => {
+    const now = Date.now();
+    // Simulate latency check - in a real app, this would compare with a visual beat
+    setCalibrationData(prev => [...prev, now]);
+    if (calibrationData.length >= 4) {
+      // Calculate average jitter/offset
+      const avgOffset = 0; // Simplified for this demo
+      setLocalSettings(prev => ({ ...prev, offset: avgOffset }));
+      setIsCalibrating(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="relative w-full max-w-2xl bg-zinc-900 border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+      >
+        {/* Header */}
+        <div className="p-6 border-b border-white/5 flex items-center justify-between bg-zinc-800/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-500/20 rounded-xl">
+              <Settings className="text-blue-400" size={24} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-white italic tracking-tight uppercase">System Settings</h2>
+              <div className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] flex items-center gap-2">
+                <Cpu size={10} />
+                Future Core Engine v4.2
+              </div>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+            <X className="text-gray-400" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide">
+          
+          {/* Device Info (Read Only) */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-zinc-800/30 p-4 rounded-2xl border border-white/5">
+              <div className="text-[10px] text-gray-500 font-bold uppercase mb-1 tracking-widest flex items-center gap-1">
+                <Monitor size={10} /> Detected Hardware
+              </div>
+              <div className="text-sm font-black text-blue-400 italic">{localSettings.deviceType}</div>
+            </div>
+            <div className="bg-zinc-800/30 p-4 rounded-2xl border border-white/5">
+              <div className="text-[10px] text-gray-500 font-bold uppercase mb-1 tracking-widest flex items-center gap-1">
+                <Smartphone size={10} /> System OS
+              </div>
+              <div className="text-sm font-black text-purple-400 italic">{localSettings.os}</div>
+            </div>
+          </div>
+
+          {/* Sliders */}
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-white font-bold uppercase text-xs tracking-widest">
+                  <MousePointer2 size={14} className="text-blue-400" />
+                  Mouse Sensitivity
+                </div>
+                <span className="text-blue-400 font-black italic">{localSettings.sensitivity.toFixed(1)}x</span>
+              </div>
+              <input 
+                type="range" min="0.5" max="3" step="0.1"
+                value={localSettings.sensitivity}
+                onChange={(e) => setLocalSettings({...localSettings, sensitivity: parseFloat(e.target.value)})}
+                className="w-full h-1.5 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-blue-500"
+              />
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-white font-bold uppercase text-xs tracking-widest">
+                  <Clock size={14} className="text-yellow-400" />
+                  Input Offset (Latency)
+                </div>
+                <span className="text-yellow-400 font-black italic">{localSettings.offset}ms</span>
+              </div>
+              <div className="flex gap-4 items-center">
+                <input 
+                  type="range" min="-200" max="200" step="1"
+                  value={localSettings.offset}
+                  onChange={(e) => setLocalSettings({...localSettings, offset: parseInt(e.target.value)})}
+                  className="flex-1 h-1.5 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-yellow-500"
+                />
+                <button 
+                  onClick={handleCalibrate}
+                  className="px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-[10px] font-black text-yellow-500 uppercase tracking-widest hover:bg-yellow-500/20 transition-all"
+                >
+                  Recalibrate
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-white font-bold uppercase text-xs tracking-widest">
+                  <Zap size={14} className="text-cyan-400" />
+                  Target Speed
+                </div>
+                <span className="text-cyan-400 font-black italic">{localSettings.speed.toFixed(1)}x</span>
+              </div>
+              <input 
+                type="range" min="0.5" max="2" step="0.1"
+                value={localSettings.speed}
+                onChange={(e) => setLocalSettings({...localSettings, speed: parseFloat(e.target.value)})}
+                className="w-full h-1.5 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-cyan-500"
+              />
+            </div>
+          </div>
+
+          {/* Fever Settings */}
+          <div className="bg-zinc-800/20 p-6 rounded-3xl border border-white/5 space-y-4">
+             <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-white font-black italic uppercase tracking-tight">Fever Auto-Burst</h3>
+                  <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Toggle Automatic Fever Activation</p>
+                </div>
+                <button 
+                  onClick={() => setLocalSettings({...localSettings, autoFever: !localSettings.autoFever})}
+                  className={`w-14 h-8 rounded-full p-1 transition-all ${localSettings.autoFever ? 'bg-red-500' : 'bg-zinc-700'}`}
+                >
+                  <motion.div 
+                    animate={{ x: localSettings.autoFever ? 24 : 0 }}
+                    className="w-6 h-6 bg-white rounded-full shadow-lg"
+                  />
+                </button>
+             </div>
+          </div>
+
+          {/* Calibration Overlay */}
+          <AnimatePresence>
+            {isCalibrating && (
+              <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-10 text-center"
+              >
+                <div className="mb-10">
+                  <h3 className="text-3xl font-black text-white italic uppercase mb-2">Syncing Heartbeats...</h3>
+                  <p className="text-sm text-gray-400">TAP THE TARGET 5 TIMES ON THE BEAT</p>
+                </div>
+                
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={onCalibrateHit}
+                  className="w-40 h-40 rounded-full bg-yellow-500 flex items-center justify-center shadow-[0_0_50px_rgba(234,179,8,0.5)]"
+                >
+                  <Target size={80} className="text-black" />
+                </motion.button>
+
+                <div className="mt-10 flex gap-2">
+                  {[...Array(5)].map((_, i) => (
+                    <div 
+                      key={i} 
+                      className={`w-3 h-3 rounded-full ${i < calibrationData.length ? 'bg-yellow-500' : 'bg-zinc-800'}`} 
+                    />
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 bg-zinc-800/80 backdrop-blur-md border-t border-white/5 flex gap-4">
+          <button 
+            onClick={onClose}
+            className="flex-1 py-4 bg-zinc-700/50 hover:bg-zinc-700 rounded-2xl text-xs font-black text-white uppercase tracking-[0.2em] transition-all"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={() => onSave(localSettings)}
+            className="flex-[2] py-4 bg-blue-600 hover:bg-blue-500 rounded-2xl text-xs font-black text-white uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20"
+          >
+            <Save size={16} />
+            Apply Core Settings
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};

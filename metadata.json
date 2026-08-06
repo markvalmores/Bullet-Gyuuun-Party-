@@ -1,0 +1,6 @@
+{
+  "name": "Bullet Gyuuun Party!!!",
+  "description": "High-octane rhythm shooting madness featuring the legendary Usagyuuun! Multi-device support, global leaderboards, and pure Gyuuun energy.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
