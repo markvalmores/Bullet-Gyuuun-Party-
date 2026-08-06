@@ -5,8 +5,8 @@
 
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { db, auth } from '../lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Camera, CheckCircle2, User } from 'lucide-react';
 
 interface ProfileSetupProps {
@@ -29,11 +29,11 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ onComplete }) => {
         username,
         photoURL: photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${username}`,
         email: auth.currentUser.email,
-        createdAt: new Date()
+        createdAt: serverTimestamp()
       });
       onComplete();
     } catch (err) {
-      console.error(err);
+      handleFirestoreError(err, OperationType.WRITE, `users/${auth.currentUser.uid}`);
     } finally {
       setLoading(false);
     }

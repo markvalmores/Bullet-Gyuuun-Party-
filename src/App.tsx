@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from './lib/firebase';
+import { auth, db, handleFirestoreError, OperationType } from './lib/firebase';
 import { GameState, Character, ScoreBreakdown, UserProfile, GameSettings } from './types';
 import { Auth } from './components/Auth';
 import { ProfileSetup } from './components/ProfileSetup';
@@ -93,15 +93,19 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
-        const docRef = doc(db, 'users', firebaseUser.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const userData = docSnap.data() as UserProfile;
-          const isAdmin = firebaseUser.email ? ADMIN_EMAILS.includes(firebaseUser.email.toLowerCase()) : false;
-          setProfile({ ...userData, isAdmin });
-          setState('START');
-        } else {
-          setState('PROFILE_SETUP');
+        try {
+          const docRef = doc(db, 'users', firebaseUser.uid);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const userData = docSnap.data() as UserProfile;
+            const isAdmin = firebaseUser.email ? ADMIN_EMAILS.includes(firebaseUser.email.toLowerCase()) : false;
+            setProfile({ ...userData, isAdmin });
+            setState('START');
+          } else {
+            setState('PROFILE_SETUP');
+          }
+        } catch (err) {
+          handleFirestoreError(err, OperationType.GET, `users/${firebaseUser.uid}`);
         }
       } else {
         setState('AUTH');
@@ -131,7 +135,7 @@ export default function App() {
           timestamp: serverTimestamp()
         });
       } catch (err) {
-        console.error("Score submission failed:", err);
+        handleFirestoreError(err, OperationType.CREATE, 'scores');
       }
     }
 
