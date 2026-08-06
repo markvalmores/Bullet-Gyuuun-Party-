@@ -36,6 +36,8 @@ interface Note {
   status: 'ACTIVE' | 'HIT' | 'MISS';
 }
 
+const DEFAULT_FALLBACK_TARGET = 'https://www.image2url.com/r2/default/images/1785984666532-14adb4b9-76a5-4180-a434-6860675a9125.png';
+
 export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, targetImages, settings }) => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [particles, setParticles] = useState<Particle[]>([]);
@@ -49,15 +51,45 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
   const [feedback, setFeedback] = useState<{ text: string; color: string; id: number } | null>(null);
   const [lastLaneHit, setLastLaneHit] = useState<number | null>(null);
   const [isZooming, setIsZooming] = useState(false);
+  const [cursorPos, setCursorPos] = useState({ x: 50, y: 85 }); // Percentage
 
   // Fever State
   const [feverAmount, setFeverAmount] = useState(0);
   const [isFever, setIsFever] = useState(false);
   const [feverType, setFeverType] = useState<FeverType>('BLUE');
 
+  const containerRef = useRef<HTMLDivElement>(null);
   const startTimeRef = useRef<number>(Date.now());
   const gameLoopRef = useRef<number>(0);
   const nextSpawnRef = useRef<number>(Date.now() + 1000);
+
+  const handlePointerMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    let clientX, clientY;
+
+    if ('touches' in e) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    const x = ((clientX - rect.left) / rect.width) * 100;
+    const y = ((clientY - rect.top) / rect.height) * 100;
+
+    // Magnetic snap to lanes
+    const laneWidth = 25;
+    const laneIndex = Math.floor(x / laneWidth);
+    const snappedX = (laneIndex * laneWidth) + (laneWidth / 2);
+    
+    // Snap Y to hit zone if close
+    const hitZoneY = 85;
+    const snappedY = Math.abs(y - hitZoneY) < 15 ? hitZoneY : y;
+
+    setCursorPos({ x: snappedX, y: snappedY });
+  }, []);
 
   // Audio Context Ref
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -118,7 +150,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
 
   const spawnNote = useCallback(() => {
     const lane = Math.floor(Math.random() * 4);
-    const randomImage = targetImages[Math.floor(Math.random() * targetImages.length)];
+    const validTargets = (targetImages && targetImages.length > 0) ? targetImages : [DEFAULT_FALLBACK_TARGET];
+    const rawImage = validTargets[Math.floor(Math.random() * validTargets.length)];
+    const randomImage = (rawImage && rawImage.trim().length > 0) ? rawImage : DEFAULT_FALLBACK_TARGET;
     const newNote: Note = {
       id: Math.random().toString(36).substr(2, 9),
       lane,
@@ -276,7 +310,35 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
   }, [spawnNote, onFinish, perfects, goods, misses, maxCombo, score, combo, isFever, settings.speed]);
 
   return (
-    <div className={`relative w-full h-full bg-zinc-950 overflow-hidden select-none transition-transform duration-75 ${isZooming ? 'scale-[1.02]' : 'scale-100'}`}>
+    <div 
+      ref={containerRef}
+      onMouseMove={handlePointerMove}
+      onTouchMove={handlePointerMove}
+      className={`relative w-full h-full bg-zinc-950 overflow-hidden select-none transition-transform duration-75 ${isZooming ? 'scale-[1.02]' : 'scale-100'}`}
+    >
+      {/* Predictive Crosshair */}
+      <motion.div
+        animate={{ 
+          x: `${cursorPos.x}%`, 
+          y: `${cursorPos.y}%`,
+          scale: lastLaneHit !== null ? [1, 1.5, 1] : 1
+        }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300, mass: 0.5 }}
+        className="absolute w-12 h-12 -translate-x-1/2 -translate-y-1/2 z-[60] pointer-events-none"
+      >
+        <div className={`relative w-full h-full flex items-center justify-center ${isFever ? 'text-red-500' : 'text-blue-500'}`}>
+          <Crosshair size={32} className="animate-spin-slow drop-shadow-glow" />
+          <div className="absolute inset-0 border-2 border-current rounded-full animate-ping opacity-20" />
+          
+          {/* Prediction Trail */}
+          <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 opacity-40">
+            <div className="w-1 h-1 rounded-full bg-current" />
+            <div className="w-1 h-2 rounded-full bg-current" />
+            <div className="w-1 h-4 rounded-full bg-current" />
+          </div>
+        </div>
+      </motion.div>
+
       {/* Background Grid/Stars */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(59,130,246,0.1)_0%,_transparent_70%)]" />
@@ -354,11 +416,14 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
                     isFever ? 'border-red-400' : 'border-blue-400'
                   }`}>
                     <img 
-                      src={note.image} 
+                      src={note.image || DEFAULT_FALLBACK_TARGET} 
                       alt="target" 
                       className="w-[80%] h-[80%] object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] transform-gpu"
                       referrerPolicy="no-referrer"
                       loading="eager"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = DEFAULT_FALLBACK_TARGET;
+                      }}
                     />
                     
                     {/* Inner Target Ring */}

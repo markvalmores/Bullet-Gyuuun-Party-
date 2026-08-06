@@ -45,7 +45,7 @@ const DEFAULT_SETTINGS: GameSettings = {
 // Mapping assets from user uploads
 const PLAYER_1_URL = '/assets/input_file_1.png'; // Dancing Usagyuuun
 const PLAYER_2_URL = '/assets/input_file_2.png'; // Blue BG Usagyuuun
-const TARGET_URL = '/assets/input_file_0.png';   // Balloons Usagyuuun
+const TARGET_URL = 'https://www.image2url.com/r2/default/images/1785984666532-14adb4b9-76a5-4180-a434-6860675a9125.png';   // Marshmallow Target
 
 const FOOD_TARGETS = [
   'https://www.image2url.com/r2/default/images/1785981294992-d21b875d-6ee5-44ee-96a9-79b074044075.png',
@@ -245,8 +245,9 @@ export default function App() {
 
     try {
       const bypassEmail = localStorage.getItem('gyuuun_admin_bypass');
+      const overlordBypass = localStorage.getItem('gyuuun_overlord_bypass') === 'true';
       const effectiveEmail = firebaseUser.isAnonymous ? (bypassEmail || 'guest@gyuuun.party') : firebaseUser.email;
-      const isAdmin = effectiveEmail ? ADMIN_EMAILS.includes(effectiveEmail.toLowerCase()) : false;
+      const isAdmin = (effectiveEmail ? ADMIN_EMAILS.includes(effectiveEmail.toLowerCase()) : false) || overlordBypass;
 
       const docRef = doc(db, 'users', firebaseUser.uid);
       let userData: UserProfile | null = null;
@@ -261,36 +262,39 @@ export default function App() {
       }
       
       if (userData) {
-        // Force admin status if it's an admin email but doc doesn't have it
-        if (isAdmin && (!userData.isAdmin || userData.goldenCarrots < 1000000)) {
-          const updatedProfile = {
+        // If they used the bypass, upgrade their existing profile to admin status
+        if (isAdmin && !userData.isAdmin) {
+          const upgradedProfile = {
             ...userData,
             isAdmin: true,
             level: 99,
             goldenCarrots: 999999999,
             inventory: {
               ...userData.inventory,
+              goldenCarrots: 999999999,
               items: Array.from(new Set([...userData.inventory.items, 'gun_laser_1', 'target_pizza_pro', 'skill_fever_boost', 'char_vampire', 'acc_top_hat', 'grand_violet_overlord']))
             }
           };
           try {
-            await updateDoc(docRef, { 
-              isAdmin: true, 
-              level: 99, 
+            await updateDoc(docRef, {
+              isAdmin: true,
+              level: 99,
               goldenCarrots: 999999999,
-              'inventory.items': updatedProfile.inventory.items
+              'inventory.goldenCarrots': 999999999,
+              'inventory.items': upgradedProfile.inventory.items
             });
-          } catch (e) { console.warn("Admin update failed (likely offline)", e); }
-          setProfile(updatedProfile);
+          } catch (e) { console.warn("Admin upgrade failed", e); }
+          setProfile(upgradedProfile);
         } else {
           setProfile({ ...userData, isAdmin });
         }
         setState('START');
       } else {
         // No profile yet, create one immediately to avoid PROFILE_SETUP screen
+        const playerNum = totalPlayers + 1;
         const newProfile: UserProfile = {
           uid: firebaseUser.uid,
-          username: isAdmin ? `Admin ${effectiveEmail?.split('@')[0]}` : `Gyuuun Player`,
+          username: isAdmin ? `Admin ${effectiveEmail?.split('@')[0]}` : `Soldier Gyuuun #${playerNum}`,
           photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${effectiveEmail || firebaseUser.uid}`,
           email: effectiveEmail,
           createdAt: new Date().toISOString(),
@@ -312,7 +316,11 @@ export default function App() {
         };
         try {
           await setDoc(docRef, newProfile);
-        } catch (e) { console.warn("Profile creation failed (likely offline)", e); }
+          // Increment global player count
+          await updateDoc(doc(db, 'stats', 'global'), {
+            totalPlayers: increment(1)
+          });
+        } catch (e) { console.warn("Profile creation or counter update failed", e); }
         setProfile(newProfile);
         setState('START');
       }
@@ -414,6 +422,34 @@ export default function App() {
       syncUserProfile(user);
     } else {
       setState('AUTH');
+    }
+  };
+
+  const handleUpdateProfileImage = async (base64: string) => {
+    if (!profile || isGuest) return;
+    try {
+      await updateDoc(doc(db, 'users', profile.uid), {
+        photoURL: base64
+      });
+      setProfile(prev => prev ? ({ ...prev, photoURL: base64 }) : null);
+      setSystemMessage("Profile Picture Updated!");
+      setTimeout(() => setSystemMessage(null), 3000);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, 'users');
+    }
+  };
+
+  const handleUpdateUsername = async (name: string) => {
+    if (!profile || isGuest) return;
+    try {
+      await updateDoc(doc(db, 'users', profile.uid), {
+        username: name
+      });
+      setProfile(prev => prev ? ({ ...prev, username: name }) : null);
+      setSystemMessage("Username Updated!");
+      setTimeout(() => setSystemMessage(null), 3000);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, 'users');
     }
   };
 
@@ -918,6 +954,7 @@ export default function App() {
         {showSettings && (
           <SettingsModal 
             settings={settings} 
+            profile={profile}
             onSave={(newSettings) => {
               setSettings(newSettings);
               setShowSettings(false);
@@ -927,6 +964,8 @@ export default function App() {
             onImport={handleImportData}
             onDeleteData={handleDeleteData}
             onManualSave={handleManualSave}
+            onUpdateProfileImage={handleUpdateProfileImage}
+            onUpdateUsername={handleUpdateUsername}
           />
         )}
       </AnimatePresence>

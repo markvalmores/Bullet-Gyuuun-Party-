@@ -23,28 +23,75 @@ import {
   Upload,
   Trash2,
   Database,
-  FileJson
+  FileJson,
+  User,
+  Camera,
+  Edit2
 } from 'lucide-react';
-import { GameSettings } from '../types';
+import { GameSettings, UserProfile } from '../types';
 
 interface SettingsModalProps {
   settings: GameSettings;
+  profile: UserProfile | null;
   onSave: (newSettings: GameSettings) => void;
   onClose: () => void;
   onExport: () => void;
   onImport: (data: string) => void;
   onDeleteData: () => void;
   onManualSave: () => void;
+  onUpdateProfileImage: (base64: string) => void;
+  onUpdateUsername: (name: string) => void;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose, onExport, onImport, onDeleteData, onManualSave }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ 
+  settings, 
+  profile,
+  onSave, 
+  onClose, 
+  onExport, 
+  onImport, 
+  onDeleteData, 
+  onManualSave,
+  onUpdateProfileImage,
+  onUpdateUsername
+}) => {
   const [localSettings, setLocalSettings] = useState<GameSettings>(settings);
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [calibrationData, setCalibrationData] = useState<number[]>([]);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [tempName, setTempName] = useState(profile?.username || "");
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const profileImageInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleProfileImageClick = () => {
+    profileImageInputRef.current?.click();
+  };
+
+  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 1024 * 1024) {
+        alert("Image too large! Please keep it under 1MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        onUpdateProfileImage(base64);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleNameSave = () => {
+    if (tempName.trim()) {
+      onUpdateUsername(tempName.trim());
+      setIsEditingName(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -135,6 +182,75 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, 
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide">
+          
+          {/* Profile Section */}
+          <div className="bg-zinc-800/40 p-6 rounded-3xl border border-white/10 space-y-6">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-green-500/20 rounded-xl">
+                <User className="text-green-400" size={18} />
+              </div>
+              <div>
+                <h3 className="text-white font-black italic uppercase tracking-tight">Gyuuun Profile</h3>
+                <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Pilot Identification</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-6">
+              <div className="relative group">
+                <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-white/10 bg-zinc-950 shadow-2xl">
+                  {profile?.photoURL ? (
+                    <img src={profile.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-zinc-700">
+                      <User size={40} />
+                    </div>
+                  )}
+                </div>
+                <button 
+                  onClick={handleProfileImageClick}
+                  className="absolute -bottom-2 -right-2 p-2 bg-blue-600 text-white rounded-xl shadow-lg hover:bg-blue-500 transition-all active:scale-90"
+                >
+                  <Camera size={14} />
+                </button>
+                <input 
+                  type="file" 
+                  ref={profileImageInputRef} 
+                  onChange={handleProfileImageChange} 
+                  accept="image/jpeg,image/png,image/gif" 
+                  className="hidden" 
+                />
+              </div>
+
+              <div className="flex-1 space-y-2 w-full text-center sm:text-left">
+                <div className="flex items-center justify-center sm:justify-start gap-3">
+                  {isEditingName ? (
+                    <div className="flex items-center gap-2 w-full max-w-xs">
+                      <input 
+                        type="text" 
+                        value={tempName}
+                        onChange={(e) => setTempName(e.target.value)}
+                        className="flex-1 bg-zinc-900 border border-blue-500/50 rounded-xl px-4 py-2 text-sm text-white font-black italic outline-none focus:border-blue-500"
+                        autoFocus
+                      />
+                      <button onClick={handleNameSave} className="p-2 bg-green-500 text-white rounded-xl">
+                        <Save size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <h4 className="text-2xl font-black text-white italic tracking-tighter uppercase">{profile?.username || "Anonymous Soldier"}</h4>
+                      <button onClick={() => setIsEditingName(true)} className="p-2 hover:bg-white/10 rounded-lg text-zinc-500">
+                        <Edit2 size={14} />
+                      </button>
+                    </>
+                  )}
+                </div>
+                <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+                  ID: {profile?.uid.substring(0, 12)}...
+                </div>
+              </div>
+            </div>
+          </div>
           
           {/* Device Info (Read Only) */}
           <div className="grid grid-cols-2 gap-4">

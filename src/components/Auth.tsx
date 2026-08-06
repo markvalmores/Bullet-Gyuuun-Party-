@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { auth } from '../lib/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { ShieldCheck, AlertCircle, LogIn, UserPlus } from 'lucide-react';
+import { ShieldCheck, AlertCircle, LogIn, UserPlus, Terminal } from 'lucide-react';
 
 interface AuthProps {
   onAuthSuccess: () => void;
@@ -20,6 +20,24 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onGuestPlay }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [adminCode, setAdminCode] = useState('');
+
+  const handleAdminAccess = async () => {
+    if (adminCode === '121997mdvgou') {
+      localStorage.setItem('gyuuun_overlord_bypass', 'true');
+      setLoading(true);
+      try {
+        const { signInAnonymously } = await import('firebase/auth');
+        await signInAnonymously(auth);
+        onAuthSuccess();
+      } catch (err) {
+        onAuthSuccess();
+      }
+    } else {
+      setError('INVALID OVERRIDE CODE');
+      setAdminCode('');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,9 +159,47 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onGuestPlay }) => {
         </button>
       </div>
 
-      <div className="mt-8 pt-8 border-t border-white/5 flex flex-col items-center gap-2">
-        <div className="text-[10px] text-gray-600 uppercase font-bold tracking-[0.3em]">Anti-Virus: Enabled</div>
-        <div className="text-[10px] text-green-500/50 uppercase font-bold tracking-[0.3em]">System Status: Optimal</div>
+      <div className="mt-8 pt-8 border-t border-white/5 w-full">
+        <div className="bg-red-500/5 border border-red-500/20 rounded-[2rem] p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-red-500/20 rounded-xl">
+              <Terminal size={18} className="text-red-500" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-red-500 italic uppercase tracking-tight">Admin Terminal</h3>
+              <p className="text-[10px] text-red-900/50 uppercase font-bold tracking-widest leading-none">Security Override Entry</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <input 
+              type="password"
+              value={adminCode}
+              onChange={(e) => setAdminCode(e.target.value)}
+              placeholder="ENTER OVERRIDE CODE"
+              className="flex-1 bg-black/40 border border-red-500/30 rounded-xl px-4 py-3 text-sm text-white uppercase font-black focus:border-red-500 outline-none transition-all placeholder:text-red-900/20"
+              onKeyDown={(e) => e.key === 'Enter' && handleAdminAccess()}
+            />
+            <button 
+              onClick={handleAdminAccess}
+              className="p-3 bg-red-600 hover:bg-red-500 text-white rounded-xl shadow-lg shadow-red-600/20 transition-all active:scale-90"
+              title="Execute Override"
+            >
+              <Terminal size={20} />
+            </button>
+          </div>
+          
+          <div className="flex justify-center gap-4 pt-2">
+            <div className="text-[9px] text-gray-700 uppercase font-black tracking-[0.2em] flex items-center gap-1">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+              AV-Safe
+            </div>
+            <div className="text-[9px] text-gray-700 uppercase font-black tracking-[0.2em] flex items-center gap-1">
+              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+              Gyuuun-Auth
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

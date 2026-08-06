@@ -10,7 +10,7 @@ const ASSETS_TO_PRELOAD = [
   'https://www.image2url.com/r2/default/images/1785981294992-d21b875d-6ee5-44ee-96a9-79b074044075.png',
   'https://www.image2url.com/r2/default/images/1785981347735-83d8d341-e7ca-49a6-9556-5321b0252fff.png',
   'https://www.image2url.com/r2/default/images/1785981379259-b9552a51-d5eb-4a71-a4a3-386e2bbf4a65.png',
-  '/assets/input_file_0.png',
+  'https://www.image2url.com/r2/default/images/1785984666532-14adb4b9-76a5-4180-a434-6860675a9125.png',
   '/assets/input_file_1.png',
   '/assets/input_file_2.png',
   'https://www.image2url.com/r2/default/images/1785975835256-0b878e0d-31b6-4eb0-967a-7ce685bb7418.png'
