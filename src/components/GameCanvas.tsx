@@ -464,16 +464,16 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
       </div>
 
       {/* HUD */}
-      <div className="absolute top-0 left-0 right-0 p-8 flex justify-between items-start z-50 pointer-events-none">
-        <div className="flex flex-col gap-4">
-          <div className="bg-black/80 backdrop-blur-md px-6 py-2 rounded-2xl border border-white/20 shadow-2xl">
-            <div className="text-[10px] text-gray-400 uppercase font-black mb-1 tracking-widest">Score</div>
-            <div className="text-4xl font-black text-white italic tracking-tighter">{score.toLocaleString()}</div>
+      <div className="absolute top-0 left-0 right-0 p-4 md:p-8 flex justify-between items-start z-50 pointer-events-none gap-2">
+        <div className="flex flex-col gap-2 md:gap-4">
+          <div className="bg-black/80 backdrop-blur-md px-3 py-1 md:px-6 md:py-2 rounded-xl md:rounded-2xl border border-white/20 shadow-2xl">
+            <div className="text-[8px] md:text-[10px] text-gray-400 uppercase font-black mb-0.5 md:mb-1 tracking-widest">Score</div>
+            <div className="text-xl md:text-4xl font-black text-white italic tracking-tighter">{score.toLocaleString()}</div>
           </div>
           
           {/* Fever Bar */}
-          <div className="flex flex-col gap-2">
-            <div className="w-64 h-6 bg-black/60 rounded-full border-2 border-white/10 overflow-hidden relative shadow-lg">
+          <div className="flex flex-col gap-1 md:gap-2">
+            <div className="w-32 md:w-64 h-4 md:h-6 bg-black/60 rounded-full border-2 border-white/10 overflow-hidden relative shadow-lg">
               <motion.div 
                 initial={{ width: 0 }}
                 animate={{ width: `${feverAmount}%` }}
@@ -485,7 +485,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
                   transition={{ repeat: Infinity, duration: 0.5 }}
                   className="absolute inset-0 flex items-center justify-center"
                 >
-                  <span className="text-[10px] font-black text-white uppercase tracking-[0.3em] italic">FEVER MODE ACTIVE!!</span>
+                  <span className="text-[7px] md:text-[10px] font-black text-white uppercase tracking-[0.2em] md:tracking-[0.3em] italic">FEVER!</span>
                 </motion.div>
               )}
             </div>
@@ -503,15 +503,15 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
                     e.stopPropagation();
                     triggerFever();
                   }}
-                  className="pointer-events-auto w-full py-3 bg-red-600 rounded-xl border-2 border-white shadow-[0_0_30px_rgba(220,38,38,0.5)] flex items-center justify-center gap-2 group overflow-hidden relative"
+                  className="pointer-events-auto w-full py-1.5 md:py-3 bg-red-600 rounded-lg md:rounded-xl border border-white/40 shadow-[0_0_20px_rgba(220,38,38,0.5)] flex items-center justify-center gap-1 md:gap-2 group overflow-hidden relative"
                 >
                   <motion.div 
                     animate={{ x: [-100, 200] }}
                     transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
                     className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12"
                   />
-                  <Bomb className="text-white group-hover:rotate-12 transition-transform" size={20} />
-                  <span className="text-xs font-black text-white uppercase tracking-widest italic">Ignite Gyuuun Fever!</span>
+                  <Bomb className="text-white group-hover:rotate-12 transition-transform" size={14} />
+                  <span className="text-[8px] md:text-xs font-black text-white uppercase tracking-widest italic">Ignite Fever!</span>
                 </motion.button>
               )}
             </AnimatePresence>
@@ -519,8 +519,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
         </div>
 
         <div className="flex flex-col items-center">
-          <div className={`px-10 py-3 rounded-full border-4 border-white shadow-2xl transform -skew-x-12 transition-colors ${isFever ? 'bg-red-600' : 'bg-blue-600'}`}>
-            <div className="text-3xl font-black text-white italic tracking-tighter">{timeLeft}s</div>
+          <div className={`px-4 py-1 md:px-10 md:py-3 rounded-full border-2 md:border-4 border-white shadow-2xl transform -skew-x-12 transition-colors ${isFever ? 'bg-red-600' : 'bg-blue-600'}`}>
+            <div className="text-sm md:text-3xl font-black text-white italic tracking-tighter">{timeLeft}s</div>
           </div>
           
           <AnimatePresence mode="wait">
@@ -530,10 +530,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
                 initial={{ scale: 0, rotate: -15, opacity: 0 }}
                 animate={{ scale: 1, rotate: 0, opacity: 1 }}
                 exit={{ scale: 2, opacity: 0 }}
-                className="mt-6 flex flex-col items-center"
+                className="mt-2 md:mt-6 flex flex-col items-center"
               >
-                <div className={`text-8xl font-black italic tracking-tighter drop-shadow-[0_5px_20px_rgba(0,0,0,0.5)] flex items-center gap-3 ${isFever ? 'text-red-400' : 'text-yellow-400'}`}>
-                  <Zap size={56} fill="currentColor" />
+                <div className={`text-2xl md:text-8xl font-black italic tracking-tighter drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] flex items-center gap-1 md:gap-3 ${isFever ? 'text-red-400' : 'text-yellow-400'}`}>
+                  <Zap size={24} className="md:w-14 md:h-14" fill="currentColor" />
                   {combo} COMBO
                 </div>
               </motion.div>
@@ -541,15 +541,15 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
           </AnimatePresence>
         </div>
 
-        <div className="flex flex-col items-end gap-2">
-          <div className="bg-black/60 backdrop-blur-md px-6 py-2 rounded-2xl border border-white/20 text-right shadow-2xl">
-            <div className="text-[10px] text-gray-400 uppercase font-black mb-1 tracking-widest">Max Combo</div>
-            <div className="text-3xl font-black text-white italic tracking-tighter">{maxCombo}</div>
+        <div className="flex flex-col items-end gap-1 md:gap-2">
+          <div className="bg-black/60 backdrop-blur-md px-3 py-1 md:px-6 md:py-2 rounded-xl md:rounded-2xl border border-white/20 text-right shadow-2xl">
+            <div className="text-[8px] md:text-[10px] text-gray-400 uppercase font-black mb-0.5 md:mb-1 tracking-widest">Max Combo</div>
+            <div className="text-lg md:text-3xl font-black text-white italic tracking-tighter">{maxCombo}</div>
           </div>
-           <div className="bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-xl border border-white/10 self-end">
-             <div className="flex items-center gap-2 text-[10px] text-blue-400 font-black uppercase">
+           <div className="bg-black/60 backdrop-blur-md px-2 py-1 md:px-4 md:py-1.5 rounded-lg md:rounded-xl border border-white/10 self-end hidden sm:block">
+             <div className="flex items-center gap-1 md:gap-2 text-[7px] md:text-[10px] text-blue-400 font-black uppercase">
                <Loader2 size={10} className="animate-spin" />
-               Processing Gyuuun...
+               Processing...
              </div>
           </div>
         </div>

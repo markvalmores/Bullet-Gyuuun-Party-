@@ -540,81 +540,101 @@ export default function App() {
         </div>
       </div>
 
-      <div className="absolute top-6 left-6 z-50 flex items-center gap-4">
-        <motion.div 
-          onClick={runAntiVirus}
-          className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 cursor-pointer hover:bg-black/80 transition-all"
-        >
-          <ShieldCheck size={16} className="text-green-400" />
-          <span className="text-[10px] font-black text-white uppercase tracking-widest">Secure State</span>
-        </motion.div>
+      {/* Header Navigation - Shown only in Lobby (START) or RESULTS to avoid overlap and clutter */}
+      <AnimatePresence>
+        {(state === 'START' || state === 'RESULTS') && (
+          <motion.div 
+            initial={{ y: -100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -100, opacity: 0 }}
+            className="absolute top-0 left-0 right-0 z-50 p-4 md:p-6 flex flex-wrap justify-between items-start gap-4 pointer-events-none"
+          >
+            {/* Left Side Controls */}
+            <div className="flex flex-wrap items-center gap-2 md:gap-4 pointer-events-auto">
+              <motion.div 
+                onClick={runAntiVirus}
+                className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 md:px-4 md:py-2 rounded-full border border-white/20 cursor-pointer hover:bg-black/80 transition-all shadow-lg"
+              >
+                <ShieldCheck size={14} className="text-green-400" />
+                <span className="text-[9px] md:text-[10px] font-black text-white uppercase tracking-widest hidden sm:inline">Secure State</span>
+              </motion.div>
 
-        <button 
-          onClick={refreshSystem}
-          title="Auto-Fix System"
-          className="p-2 bg-black/60 backdrop-blur-md rounded-full border border-white/20 hover:bg-white/10 transition-all"
-        >
-          <RefreshCw size={16} className="text-white" />
-        </button>
+              <button 
+                onClick={refreshSystem}
+                title="Auto-Fix System"
+                className="p-2 bg-black/60 backdrop-blur-md rounded-full border border-white/20 hover:bg-white/10 transition-all shadow-lg"
+              >
+                <RefreshCw size={14} className="text-white" />
+              </button>
 
-        {profile && (
-           <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
-             <img src={profile.photoURL} alt="pfp" className="w-6 h-6 rounded-full border border-white/20" referrerPolicy="no-referrer" />
-             <div className="flex items-center gap-3 px-1">
-               <div className="flex flex-col">
-                 <span className="text-xs font-bold text-white tracking-tight leading-none">{profile.username}</span>
-                 {profile.isAdmin && (
-                   <span className="text-[8px] font-black text-yellow-400 uppercase tracking-widest mt-0.5">Admin Level 99</span>
-                 )}
-               </div>
-               <div className="h-6 w-[1px] bg-white/10" />
-               <div className="flex items-center gap-1.5">
-                 <img src={CARROT_ICON} className="w-4 h-4" />
-                 <span className="text-xs font-black text-yellow-400">{profile.goldenCarrots?.toLocaleString()}</span>
-               </div>
-             </div>
-           </div>
+              {profile && (
+                <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-2 py-1 md:px-3 md:py-1.5 rounded-full border border-white/10 shadow-lg">
+                  <img src={profile.photoURL} alt="pfp" className="w-5 h-5 md:w-6 md:h-6 rounded-full border border-white/20" referrerPolicy="no-referrer" />
+                  <div className="flex items-center gap-2 md:gap-3 px-1">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] md:text-xs font-bold text-white tracking-tight leading-none truncate max-w-[80px] md:max-w-none">{profile.username}</span>
+                      {profile.isAdmin && (
+                        <span className="text-[7px] md:text-[8px] font-black text-yellow-400 uppercase tracking-widest mt-0.5">Admin</span>
+                      )}
+                    </div>
+                    <div className="h-4 md:h-6 w-[1px] bg-white/10" />
+                    <div className="flex items-center gap-1 md:gap-1.5">
+                      <img src={CARROT_ICON} className="w-3 h-3 md:w-4 md:h-4" />
+                      <span className="text-[10px] md:text-xs font-black text-yellow-400">{profile.goldenCarrots?.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Side Actions */}
+            <div className="flex flex-wrap items-center justify-end gap-2 md:gap-3 pointer-events-auto">
+              <button 
+                onClick={() => setView('SHOP')}
+                className="flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-5 md:py-2.5 bg-blue-600 hover:bg-blue-500 rounded-full border border-white/20 text-white transition-all shadow-lg shadow-blue-600/20 active:scale-95"
+              >
+                <ShoppingBag size={14} className="md:w-[18px] md:h-[18px]" />
+                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">Shop</span>
+              </button>
+
+              <button 
+                onClick={() => setView('GACHA')}
+                className="flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-5 md:py-2.5 bg-purple-600 hover:bg-purple-500 rounded-full border border-white/20 text-white transition-all shadow-lg shadow-purple-600/20 active:scale-95"
+              >
+                <Sparkles size={14} className="md:w-[18px] md:h-[18px]" />
+                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">Gacha</span>
+              </button>
+
+              <button 
+                onClick={() => setShowCalendar(true)}
+                className="flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-5 md:py-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-full border border-white/10 text-white transition-all shadow-lg active:scale-95"
+              >
+                <Calendar size={14} className="md:w-[18px] md:h-[18px]" />
+                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">Rewards</span>
+              </button>
+
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setShowSettings(true)}
+                  className="p-2 md:p-3 bg-black/60 backdrop-blur-md rounded-full border border-white/20 hover:bg-white/20 transition-colors shadow-lg active:scale-95"
+                >
+                  <SettingsIcon size={16} className="md:w-[20px] md:h-[20px] text-white" />
+                </button>
+                <button 
+                  onClick={() => setIsMuted(!isMuted)}
+                  className="p-2 md:p-3 bg-black/60 backdrop-blur-md rounded-full border border-white/20 hover:bg-white/20 transition-colors shadow-lg active:scale-95"
+                >
+                  {isMuted ? (
+                    <VolumeX size={16} className="md:w-[20px] md:h-[20px] text-red-400" />
+                  ) : (
+                    <Volume2 size={16} className="md:w-[20px] md:h-[20px] text-white" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </motion.div>
         )}
-      </div>
-
-      <div className="absolute top-6 right-6 flex gap-3 z-50">
-        <button 
-          onClick={() => setView('SHOP')}
-          className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-full border border-white/20 text-white transition-all shadow-lg shadow-blue-600/20"
-        >
-          <ShoppingBag size={18} />
-          <span className="text-[10px] font-black uppercase tracking-widest">Shop</span>
-        </button>
-
-        <button 
-          onClick={() => setView('GACHA')}
-          className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-500 rounded-full border border-white/20 text-white transition-all shadow-lg shadow-purple-600/20"
-        >
-          <Sparkles size={18} />
-          <span className="text-[10px] font-black uppercase tracking-widest">Gacha</span>
-        </button>
-
-        <button 
-          onClick={() => setShowCalendar(true)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-full border border-white/10 text-white transition-all"
-        >
-          <Calendar size={18} />
-          <span className="text-[10px] font-black uppercase tracking-widest">Rewards</span>
-        </button>
-
-        <button 
-          onClick={() => setShowSettings(true)}
-          className="p-3 bg-black/60 backdrop-blur-md rounded-full border border-white/20 hover:bg-white/20 transition-colors"
-        >
-          <SettingsIcon size={20} className="text-white" />
-        </button>
-        <button 
-          onClick={() => setIsMuted(!isMuted)}
-          className="p-3 bg-black/60 backdrop-blur-md rounded-full border border-white/20 hover:bg-white/20 transition-colors"
-        >
-          {isMuted ? <VolumeX size={20} className="text-red-400" /> : <Volume2 size={20} className="text-white" />}
-        </button>
-      </div>
+      </AnimatePresence>
 
       <div className="relative w-full h-full flex items-center justify-center">
         <AnimatePresence mode="wait">

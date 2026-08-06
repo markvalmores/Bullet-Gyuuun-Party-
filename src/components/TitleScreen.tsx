@@ -71,11 +71,6 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart }) => {
         </motion.div>
       </div>
 
-      {/* Decorative Corners */}
-      <div className="absolute top-10 left-10 w-20 h-20 border-t-4 border-l-4 border-white/20" />
-      <div className="absolute top-10 right-10 w-20 h-20 border-t-4 border-r-4 border-white/20" />
-      <div className="absolute bottom-10 left-10 w-20 h-20 border-b-4 border-l-4 border-white/20" />
-      <div className="absolute bottom-10 right-10 w-20 h-20 border-b-4 border-r-4 border-white/20" />
     </div>
   );
 };
