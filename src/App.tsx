@@ -25,7 +25,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { SHOP_ITEMS } from './data/items';
 import { playSound } from './lib/sound';
 
-const BACKGROUND_URL = '/src/assets/images/festival_background.jpg';
+const BACKGROUND_URL = 'https://marked-peach-ijgjzv99.edgeone.dev/file.png';
 const CARROT_ICON = '/src/assets/images/golden_carrot_currency_1785977909091.jpg';
 
 const ADMIN_EMAILS = [

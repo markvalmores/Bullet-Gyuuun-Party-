@@ -385,15 +385,22 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ character, onFinish, tar
         </div>
       </motion.div>
 
-      {/* Background Grid/Stars */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(59,130,246,0.1)_0%,_transparent_70%)]" />
+      {/* Background Wallpaper & Grid */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <img 
+          src="https://marked-peach-ijgjzv99.edgeone.dev/file.png"
+          alt="Wallpaper Background"
+          className="absolute inset-0 w-full h-full object-cover opacity-40 scale-105 blur-[0.5px]"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(59,130,246,0.15)_0%,_transparent_75%)]" />
         <motion.div 
           animate={{ y: [0, 100] }}
           transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="absolute inset-0 opacity-20"
+          className="absolute inset-0 opacity-15"
           style={{ 
-            backgroundImage: 'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)',
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)',
             backgroundSize: '40px 40px'
           }}
         />

@@ -16,7 +16,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart }) => {
     <div className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden">
       {/* Background Image */}
       <img 
-        src="https://kommodo.ai/i/KqV6vCmNJEQdyl1f2606" 
+        src="https://marked-peach-ijgjzv99.edgeone.dev/file.png" 
         alt="Bullet Gyuuuun Party!!!" 
         className="absolute inset-0 w-full h-full object-cover"
         referrerPolicy="no-referrer"
