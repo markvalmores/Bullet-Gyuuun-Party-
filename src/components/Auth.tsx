@@ -33,7 +33,27 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
       }
       onAuthSuccess();
     } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+      console.error("Auth Error:", err.code, err.message);
+      
+      let message = 'Authentication failed. Please check your credentials.';
+      
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+        message = 'Invalid email or password. If you haven\'t signed up yet, please click "Sign Up" below.';
+      } else if (err.code === 'auth/email-already-in-use') {
+        message = 'This email is already registered. Please login instead.';
+      } else if (err.code === 'auth/weak-password') {
+        message = 'Password should be at least 6 characters.';
+      } else if (err.code === 'auth/invalid-email') {
+        message = 'Please enter a valid email address.';
+      }
+
+      // Special hint for admin emails
+      const isAdminEmail = ['mdv4244@gmail.com', 'zerozone757@gmail.com', 'usagyuuunquan@gmail.com'].includes(email.toLowerCase());
+      if (isAdminEmail && err.code === 'auth/invalid-credential') {
+        message = 'Admin access detected. If you haven\'t created your account yet, switch to "Sign Up" and use your assigned password.';
+      }
+
+      setError(message);
     } finally {
       setLoading(false);
     }
