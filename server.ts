@@ -25,7 +25,7 @@ async function startServer() {
   app.post("/api/gacha/generate", async (req, res) => {
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
+        model: "gemini-1.5-flash",
         contents: "Generate a unique, cute, and crazy 'Usagyuuun' style rhythm game target object. It should be something like a food item, a cosmic object, or a funny toy. Return a name, rarity (COMMON, RARE, EPIC, LEGENDARY), and a very detailed prompt for generating an image of this object on a clean transparent background.",
         config: {
           responseMimeType: "application/json",

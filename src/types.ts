@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type GameState = 'TITLE' | 'PRELOADING' | 'AUTH' | 'PROFILE_SETUP' | 'START' | 'GAME' | 'RESULTS' | 'PLAYING' | 'SETTINGS';
+export type GameState = 'TITLE' | 'PRELOADING' | 'AUTH' | 'START' | 'GAME' | 'RESULTS' | 'PLAYING' | 'SETTINGS';
 
 export interface GameSettings {
   sensitivity: number;

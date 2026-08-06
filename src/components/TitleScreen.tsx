@@ -65,7 +65,9 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart }) => {
                 <MousePointer2 size={16} />
                 Click To Start
               </div>
-              <div className="text-[10px] text-white/60 tracking-[0.5em] mt-1">Gyuuun Security Certified</div>
+              <div className="text-[10px] text-white/60 tracking-[0.5em] mt-1 text-center">
+                Made by Usagyuun VTuber and Eleventh Gyuuun and Junichi555
+              </div>
             </motion.div>
           </div>
         </motion.div>

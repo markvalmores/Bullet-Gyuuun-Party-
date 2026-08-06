@@ -221,7 +221,7 @@ export default function App() {
 
   // AutoSave Effect
   useEffect(() => {
-    if (settings.autoSave && (state === 'RESULTS' || state === 'PROFILE_SETUP')) {
+    if (settings.autoSave && (state === 'RESULTS')) {
       const gameData = {
         profile,
         characters,
@@ -280,46 +280,41 @@ export default function App() {
               goldenCarrots: 999999999,
               'inventory.items': updatedProfile.inventory.items
             });
-          } catch (e) { console.error("Admin update failed", e); }
+          } catch (e) { console.warn("Admin update failed (likely offline)", e); }
           setProfile(updatedProfile);
         } else {
           setProfile({ ...userData, isAdmin });
         }
         setState('START');
       } else {
-        // No profile yet, or firestore failed. 
-        // If it's an admin or if we just want to bypass errors, initialize now.
-        if (isAdmin || bypassEmail || firebaseUser.isAnonymous) {
-          const newProfile: UserProfile = {
-            uid: firebaseUser.uid,
-            username: isAdmin ? `Admin ${effectiveEmail?.split('@')[0]}` : `Gyuuun Player`,
-            photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${effectiveEmail || firebaseUser.uid}`,
-            email: effectiveEmail,
-            createdAt: new Date().toISOString(),
-            isAdmin: isAdmin,
-            level: isAdmin ? 99 : 1,
+        // No profile yet, create one immediately to avoid PROFILE_SETUP screen
+        const newProfile: UserProfile = {
+          uid: firebaseUser.uid,
+          username: isAdmin ? `Admin ${effectiveEmail?.split('@')[0]}` : `Gyuuun Player`,
+          photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${effectiveEmail || firebaseUser.uid}`,
+          email: effectiveEmail,
+          createdAt: new Date().toISOString(),
+          isAdmin: isAdmin,
+          level: isAdmin ? 99 : 1,
+          goldenCarrots: isAdmin ? 999999999 : 340,
+          inventory: {
+            items: isAdmin ? ['gun_laser_1', 'target_pizza_pro', 'skill_fever_boost', 'char_vampire', 'acc_top_hat', 'grand_violet_overlord'] : [],
             goldenCarrots: isAdmin ? 999999999 : 340,
-            inventory: {
-              items: isAdmin ? ['gun_laser_1', 'target_pizza_pro', 'skill_fever_boost', 'char_vampire', 'acc_top_hat', 'grand_violet_overlord'] : [],
-              goldenCarrots: isAdmin ? 999999999 : 340,
-              equipped: {
-                skills: isAdmin ? ['skill_fever_boost', 'grand_violet_overlord'] : [],
-                character: isAdmin ? 'char_vampire' : undefined,
-                gun: isAdmin ? 'gun_laser_1' : undefined
-              }
-            },
-            achievements: isAdmin ? ['ADMIN_BYPASS'] : [],
-            dailyStreak: 1,
-            claimedToday: true
-          };
-          try {
-            await setDoc(docRef, newProfile);
-          } catch (e) { console.error("Profile creation failed", e); }
-          setProfile(newProfile);
-          setState('START');
-        } else {
-          setState('PROFILE_SETUP');
-        }
+            equipped: {
+              skills: isAdmin ? ['skill_fever_boost', 'grand_violet_overlord'] : [],
+              character: isAdmin ? 'char_vampire' : undefined,
+              gun: isAdmin ? 'gun_laser_1' : undefined
+            }
+          },
+          achievements: isAdmin ? ['ADMIN_BYPASS'] : [],
+          dailyStreak: 1,
+          claimedToday: true
+        };
+        try {
+          await setDoc(docRef, newProfile);
+        } catch (e) { console.warn("Profile creation failed (likely offline)", e); }
+        setProfile(newProfile);
+        setState('START');
       }
     } catch (err) {
       console.error("Critical Profile Sync Error:", err);
@@ -838,12 +833,6 @@ export default function App() {
                 }} 
                 onGuestPlay={handleGuestPlay} 
               />
-            </motion.div>
-          )}
-
-          {state === 'PROFILE_SETUP' && (
-            <motion.div key="profile" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-              <ProfileSetup onComplete={() => setState('START')} />
             </motion.div>
           )}
 
