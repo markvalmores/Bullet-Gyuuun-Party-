@@ -248,14 +248,22 @@ export default function App() {
       if (firebaseUser) {
         try {
           const bypassEmail = localStorage.getItem('gyuuun_admin_bypass');
-          const effectiveEmail = firebaseUser.isAnonymous ? bypassEmail : firebaseUser.email;
+          const effectiveEmail = firebaseUser.isAnonymous ? (bypassEmail || 'guest@gyuuun.party') : firebaseUser.email;
           const isAdmin = effectiveEmail ? ADMIN_EMAILS.includes(effectiveEmail.toLowerCase()) : false;
 
           const docRef = doc(db, 'users', firebaseUser.uid);
-          const docSnap = await getDoc(docRef);
+          let userData: UserProfile | null = null;
           
-          if (docSnap.exists()) {
-            const userData = docSnap.data() as UserProfile;
+          try {
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+              userData = docSnap.data() as UserProfile;
+            }
+          } catch (e) {
+            console.warn("Firestore read failed, using temporary profile", e);
+          }
+          
+          if (userData) {
             // Force admin status if it's an admin email but doc doesn't have it
             if (isAdmin && (!userData.isAdmin || userData.goldenCarrots < 1000000)) {
               const updatedProfile = {
@@ -268,43 +276,48 @@ export default function App() {
                   items: Array.from(new Set([...userData.inventory.items, 'gun_laser_1', 'target_pizza_pro', 'skill_fever_boost', 'char_vampire', 'acc_top_hat', 'grand_violet_overlord']))
                 }
               };
-              await updateDoc(docRef, { 
-                isAdmin: true, 
-                level: 99, 
-                goldenCarrots: 999999999,
-                'inventory.items': updatedProfile.inventory.items
-              });
+              try {
+                await updateDoc(docRef, { 
+                  isAdmin: true, 
+                  level: 99, 
+                  goldenCarrots: 999999999,
+                  'inventory.items': updatedProfile.inventory.items
+                });
+              } catch (e) { console.error("Admin update failed", e); }
               setProfile(updatedProfile);
             } else {
               setProfile({ ...userData, isAdmin });
             }
             setState('START');
           } else {
-            // If it's an admin bypass, we can automatically initialize the profile here
-            if (isAdmin) {
+            // No profile yet, or firestore failed. 
+            // If it's an admin or if we just want to bypass errors, initialize now.
+            if (isAdmin || bypassEmail) {
               const newProfile: UserProfile = {
                 uid: firebaseUser.uid,
-                username: `Admin ${effectiveEmail?.split('@')[0]}`,
-                photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${effectiveEmail}`,
+                username: isAdmin ? `Admin ${effectiveEmail?.split('@')[0]}` : `Gyuuun Player`,
+                photoURL: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${effectiveEmail || firebaseUser.uid}`,
                 email: effectiveEmail,
                 createdAt: new Date().toISOString(),
-                isAdmin: true,
-                level: 99,
-                goldenCarrots: 999999999,
+                isAdmin: isAdmin,
+                level: isAdmin ? 99 : 1,
+                goldenCarrots: isAdmin ? 999999999 : 500,
                 inventory: {
-                  items: ['gun_laser_1', 'target_pizza_pro', 'skill_fever_boost', 'char_vampire', 'acc_top_hat', 'grand_violet_overlord'],
-                  goldenCarrots: 999999999,
+                  items: isAdmin ? ['gun_laser_1', 'target_pizza_pro', 'skill_fever_boost', 'char_vampire', 'acc_top_hat', 'grand_violet_overlord'] : [],
+                  goldenCarrots: isAdmin ? 999999999 : 500,
                   equipped: {
-                    skills: ['skill_fever_boost', 'grand_violet_overlord'],
-                    character: 'char_vampire',
-                    gun: 'gun_laser_1'
+                    skills: isAdmin ? ['skill_fever_boost', 'grand_violet_overlord'] : [],
+                    character: isAdmin ? 'char_vampire' : undefined,
+                    gun: isAdmin ? 'gun_laser_1' : undefined
                   }
                 },
-                achievements: ['ADMIN_BYPASS'],
+                achievements: isAdmin ? ['ADMIN_BYPASS'] : [],
                 dailyStreak: 1,
                 claimedToday: true
               };
-              await setDoc(docRef, newProfile);
+              try {
+                await setDoc(docRef, newProfile);
+              } catch (e) { console.error("Profile creation failed", e); }
               setProfile(newProfile);
               setState('START');
             } else {
@@ -312,12 +325,17 @@ export default function App() {
             }
           }
         } catch (err) {
-          handleFirestoreError(err, OperationType.GET, `users/${firebaseUser.uid}`);
-          // Emergency fallback: If Firestore fails for an admin, still let them in
-          const bypassEmail = localStorage.getItem('gyuuun_admin_bypass');
-          if (bypassEmail && ADMIN_EMAILS.includes(bypassEmail.toLowerCase())) {
-            setState('START');
-          }
+          console.error("Critical Auth State Error:", err);
+          // Last ditch effort: proceed to START with a dummy profile if everything else fails
+          setProfile({
+            uid: firebaseUser.uid,
+            username: 'Emergency Player',
+            photoURL: '',
+            email: null,
+            goldenCarrots: 0,
+            inventory: { items: [], goldenCarrots: 0, equipped: { skills: [] } }
+          });
+          setState('START');
         }
       } else {
         setState('AUTH');

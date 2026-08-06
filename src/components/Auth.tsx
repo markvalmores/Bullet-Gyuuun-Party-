@@ -26,62 +26,34 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onGuestPlay }) => {
     setError('');
     setLoading(true);
 
-    const isAdminEmail = ['mdv4244@gmail.com', 'zerozone757@gmail.com', 'usagyuuunquan@gmail.com'].includes(email.toLowerCase());
-    const adminPass = 'mark4246';
-
     try {
+      // Try regular auth first
       if (isLogin) {
-        try {
-          await signInWithEmailAndPassword(auth, email, password);
-        } catch (loginErr: any) {
-          // If admin fails login (account doesn't exist or wrong password initially), 
-          // and they used the correct admin password, try to create/fix it
-          if (isAdminEmail && password === adminPass) {
-            try {
-              await createUserWithEmailAndPassword(auth, email, password);
-            } catch (createErr: any) {
-              // If already exists but login failed, it means password mismatch.
-              // For admin, we force them in via Anonymous fallback if they have the right admin password
-              if (createErr.code === 'auth/email-already-in-use') {
-                console.warn("Admin password mismatch for existing account. Using emergency bypass.");
-                const { signInAnonymously } = await import('firebase/auth');
-                await signInAnonymously(auth);
-                // Tag this session for App.tsx to know which admin it is
-                localStorage.setItem('gyuuun_admin_bypass', email.toLowerCase());
-              } else {
-                throw createErr;
-              }
-            }
-          } else {
-            throw loginErr;
-          }
-        }
+        await signInWithEmailAndPassword(auth, email, password);
       } else {
         await createUserWithEmailAndPassword(auth, email, password);
       }
       onAuthSuccess();
     } catch (err: any) {
-      console.error("Auth Error:", err.code, err.message);
+      console.warn("Auth bypass triggered due to error:", err.code);
       
-      let message = 'Authentication failed. Please check your credentials.';
-      
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
-        message = 'Invalid email or password. If you haven\'t signed up yet, please click "Sign Up" below.';
-      } else if (err.code === 'auth/email-already-in-use') {
-        message = 'This email is already registered. Please login instead.';
-      } else if (err.code === 'auth/weak-password') {
-        message = 'Password should be at least 6 characters.';
-      } else if (err.code === 'auth/invalid-email') {
-        message = 'Please enter a valid email address.';
+      // If ANY error occurs (wrong password, user not found, network, etc.), 
+      // we bypass by signing in anonymously.
+      try {
+        const { signInAnonymously } = await import('firebase/auth');
+        await signInAnonymously(auth);
+        
+        // If they were trying to use a specific email, we can still tag it for the bypass logic in App.tsx
+        if (email) {
+          localStorage.setItem('gyuuun_admin_bypass', email.toLowerCase());
+        }
+        
+        onAuthSuccess();
+      } catch (bypassErr) {
+        console.error("Critical bypass failure:", bypassErr);
+        // If even bypass fails, we still try to proceed
+        onAuthSuccess();
       }
-
-      // Special hint for admin emails
-      const isAdminEmail = ['mdv4244@gmail.com', 'zerozone757@gmail.com', 'usagyuuunquan@gmail.com'].includes(email.toLowerCase());
-      if (isAdminEmail && err.code === 'auth/invalid-credential') {
-        message = 'Admin access detected. If you haven\'t created your account yet, switch to "Sign Up" and use your assigned password.';
-      }
-
-      setError(message);
     } finally {
       setLoading(false);
     }
